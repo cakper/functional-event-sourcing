@@ -6,7 +6,7 @@ class ReplayableUuidGenerator() extends UuidGenerator {
   private var replayMode: Boolean = false
   private var ids: List[UUID]     = List.empty
 
-  override def nextUuid(): UUID = {
+  override def next(): UUID = {
     if (replayMode) {
       if (ids.isEmpty) {
         throw new RuntimeException("Replayable UUID generator doesn't have any ids left to replay")

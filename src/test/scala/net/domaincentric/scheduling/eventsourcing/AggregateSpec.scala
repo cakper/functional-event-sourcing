@@ -46,8 +46,8 @@ trait AggregateSpec[C <: Command, E <: Event, Er <: Error, S <: State[S, E]]
       throw new RuntimeException(s"Expected $expected but got $aggregate")
   }
 
-  protected def randomId(): UUID = {
-    uuidGenerator.nextUuid()
+  protected def nextUuid(): UUID = {
+    uuidGenerator.next()
   }
 
   override protected def beforeEach(): Unit = {
@@ -56,5 +56,5 @@ trait AggregateSpec[C <: Command, E <: Event, Er <: Error, S <: State[S, E]]
     aggregate = new Aggregate[C, E, Er, S](randomString, state(), handler())
   }
 
-  protected def randomString: String = UUID.randomUUID().toString
+  protected def randomString(): String = UUID.randomUUID().toString
 }
