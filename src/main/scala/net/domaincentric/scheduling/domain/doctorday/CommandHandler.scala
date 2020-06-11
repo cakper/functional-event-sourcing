@@ -1,17 +1,16 @@
 package net.domaincentric.scheduling.domain.doctorday
 
-import java.time.{ Clock, LocalDateTime }
+import java.time.LocalDateTime
+import java.util.UUID
 
-import net.domaincentric.scheduling.domain.doctorday.Aggregate.handler
-import net.domaincentric.scheduling.eventsourcing.Aggregate._
-import net.domaincentric.scheduling.eventsourcing.{ UuidGenerator, Aggregate => ESAggregate }
+import net.domaincentric.scheduling.eventsourcing
+import net.domaincentric.scheduling.eventsourcing.CommandHandler._
+import net.domaincentric.scheduling.eventsourcing.UuidGenerator
 
-class Aggregate(id: String)(implicit uuidGenerator: UuidGenerator, clock: Clock)
-    extends ESAggregate[Command, Event, Error, State](id, Unscheduled, handler)
-object Aggregate {
-  def handler(implicit idGen: UuidGenerator, clock: Clock): Handler[Command, Event, Error, State] = {
+class CommandHandler(implicit idGen: UuidGenerator) extends eventsourcing.CommandHandler[Command, Event, Error, State] {
+  override def apply(state: State, command: Command): Either[Error, Seq[Event]] = (state, command) match {
     case (Unscheduled, scheduleDay: ScheduleDay) =>
-      val dayPlannedEventId = idGen.next()
+      val dayPlannedEventId: UUID = idGen.next()
       DayScheduled(dayPlannedEventId, scheduleDay.doctorId, scheduleDay.date) :: scheduleDay.slots.map { slot =>
         SlotScheduled(
           dayPlannedEventId,

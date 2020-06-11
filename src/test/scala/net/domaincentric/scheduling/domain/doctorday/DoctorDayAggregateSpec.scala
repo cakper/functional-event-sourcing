@@ -3,15 +3,15 @@ package net.domaincentric.scheduling.domain.doctorday
 import java.time.{ LocalDate, LocalDateTime, LocalTime }
 
 import net.domaincentric.scheduling.domain.doctorday.ScheduleDay.Slot
-import net.domaincentric.scheduling.eventsourcing.Aggregate.Handler
 import net.domaincentric.scheduling.eventsourcing.AggregateSpec
+import net.domaincentric.scheduling.eventsourcing
 
 import scala.concurrent.duration._
 
 class DoctorDayAggregateSpec extends AggregateSpec[Command, Event, Error, State] {
   override def state(): State = Unscheduled
 
-  override def handler(): Handler[Command, Event, Error, State] = Aggregate.handler
+  override def handler(): eventsourcing.CommandHandler[Command, Event, Error, State] = new CommandHandler
 
   private val today: LocalDate           = LocalDate.now(clock)
   private val tenAm: LocalTime           = LocalTime.of(10, 0)

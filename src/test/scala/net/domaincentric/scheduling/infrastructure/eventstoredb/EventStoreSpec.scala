@@ -8,8 +8,8 @@ import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts
 import io.grpc.netty.shaded.io.netty.handler.ssl.util.InsecureTrustManagerFactory
 import javax.net.ssl.SSLException
 import monix.execution.Scheduler.Implicits.global
+import net.domaincentric.scheduling.application.eventsourcing.{ EventMetadata, Version }
 import net.domaincentric.scheduling.domain.doctorday.{ DayScheduled, SlotScheduled }
-import net.domaincentric.scheduling.eventsourcing.{ EventMetadata, Version }
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AsyncWordSpec
 

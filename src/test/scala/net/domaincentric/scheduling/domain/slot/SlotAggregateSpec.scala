@@ -9,7 +9,7 @@ import scala.concurrent.duration._
 class SlotAggregateSpec extends AggregateSpec[Command, Event, Error, SlotState] {
 
   override def state()   = UnscheduledSlot
-  override def handler() = SlotAggregate.handler
+  override def handler() = new CommandHandler
 
   "slot aggregate" should {
     "can be scheduled" in {

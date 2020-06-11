@@ -1,7 +1,13 @@
 package net.domaincentric.scheduling.readmodel.availableslots
 
 import java.time.LocalDate
+import java.util.UUID
 
-class Repository {
-  def getAvailableSlotsOn(date: LocalDate): Seq[AvailableSlot] = ???
+import monix.eval.Task
+
+trait Repository {
+  def addSlot(availableSlot: AvailableSlot): Task[Unit]
+  def hideSlot(slotId: UUID): Task[Unit]
+  def showSlot(slotId: UUID): Task[Unit]
+  def getAvailableSlotsOn(date: LocalDate): Task[Seq[AvailableSlot]]
 }

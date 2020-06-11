@@ -4,13 +4,15 @@ import cats.implicits._
 import com.eventstore.dbclient._
 import monix.eval.Task
 import monix.reactive.Observable
-import net.domaincentric.scheduling.eventsourcing.{ Event, EventEnvelope, EventMetadata, Version, EventStore => BaseEventStore }
-import net.domaincentric.scheduling.eventsourcing.Version._
+import net.domaincentric.scheduling.application.eventsourcing.{ EventEnvelope, EventMetadata, Version }
+import net.domaincentric.scheduling.application.eventsourcing
+import net.domaincentric.scheduling.eventsourcing.Event
+import net.domaincentric.scheduling.application.eventsourcing.Version._
 
 import scala.compat.java8.FutureConverters._
 import scala.jdk.CollectionConverters._
 
-class EventStore(val client: StreamsClient, eventSerde: EventSerde) extends BaseEventStore {
+class EventStore(val client: StreamsClient, eventSerde: EventSerde) extends eventsourcing.EventStore {
   val pageSize = 2048
 
   override def readFromStream(streamId: String): Observable[EventEnvelope] = {
@@ -32,7 +34,11 @@ class EventStore(val client: StreamsClient, eventSerde: EventSerde) extends Base
       .flatMap(Observable.fromIterable)
   }
 
-  override def createNewStream(streamId: String, events: Seq[Event], commandMetadata: EventMetadata): Task[Version] =
+  override def createNewStream(
+      streamId: String,
+      events: Seq[Event],
+      commandMetadata: EventMetadata
+  ): Task[Version] =
     for {
       events <- Task.fromTry(events.toList.traverse(eventSerde.serialize(_, commandMetadata)))
       result <- Task.deferFuture {

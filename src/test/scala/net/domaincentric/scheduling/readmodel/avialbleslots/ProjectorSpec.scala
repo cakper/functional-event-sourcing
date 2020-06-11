@@ -1,76 +1,101 @@
-//package net.domaincentric.scheduling.readmodel.avialbleslots
-//
-//import java.time.{ Clock, Instant, LocalDate, LocalDateTime, LocalTime, ZoneOffset }
-//import java.util.UUID
-//
-//import net.domaincentric.scheduling.domain.doctorday.SlotScheduled
-//import net.domaincentric.scheduling.eventsourcing.{ Event, EventHandler }
-//import net.domaincentric.scheduling.readmodel.availableslots._
-//import org.scalatest.Assertion
-//import org.scalatest.matchers.should.Matchers
-//import org.scalatest.wordspec.AnyWordSpec
-//
-//import scala.concurrent.duration._
-//
-//class ProjectorSpec extends AnyWordSpec with Matchers {
-//  def randomId(): UUID      = UUID.randomUUID()
-//  implicit val clock: Clock = Clock.fixed(Instant.now(), ZoneOffset.UTC)
-//
-//  private val today: LocalDate           = LocalDate.now(clock)
-//  private val tenAm: LocalTime           = LocalTime.of(10, 0)
-//  private val tenAmToday: LocalDateTime  = LocalDateTime.of(today, tenAm)
-//  private val tenMinutes: FiniteDuration = 10.minutes
-//
-//  private val repository: Repository = ???
-//  private val handler: EventHandler  = ???
-//
-//  def `given`(events: Event*) = {
-//
-//    List.of(events).forEach(event -> handler.handle(event, null))
-//
-//  }
-//
-//  def `then`[A](actual: A, expected: A): Assertion = expected shouldEqual actual
-//
-//  "available slots projector" should {
-//    "handle scheduling a slot" in {
-//      val scheduled = SlotScheduled(randomId(), randomId(), tenAmToday, tenMinutes)
-//      `given`(scheduled)
-//      `then`(
-//        repository.getAvailableSlotsOn(today),
-//        Seq(AvailableSlot(scheduled.dayPlannedEventId, scheduled.eventId, scheduled.startTime, scheduled.duration))
-//      )
-//    }
-//  }
-//
-//}
-//
-////class AvailableSlotsProjectorTest extends ProjectorTest {
-////  private var repository = null
-////
-////  @BeforeEach private[readmodel] def beforeEach(): Unit = {
-////    repository = new InMemoryAvailableSlotsRepository
-////    handler = new AvailableSlotsProjector(repository)
-////  }
-////
-////  @Test private[readmodel] def shouldAddSlotToTheList(): Unit = {
-////    val scheduled = new Scheduled(randomUuid, LocalDateTime.now, Duration.ofMinutes(10L))
-////    `given`(scheduled)
-////    `then`(List.of(new AvailableSlot(scheduled.getEventId, scheduled.getStartTime, scheduled.getDuration)), repository.getSlotsAvailableOn(LocalDate.now))
-////  }
-////
-////  @Test private[readmodel] def shouldRemoveSlotFromTheListIfItWasBooked(): Unit = {
-////    val scheduled = new Scheduled(randomUuid, LocalDateTime.now, Duration.ofMinutes(10L))
-////    val booked = new Booked(randomUuid, scheduled.getEventId, randomString)
-////    `given`(scheduled, booked)
-////    `then`(List.empty, repository.getSlotsAvailableOn(LocalDate.now))
-////  }
-////
-////  @Test private[readmodel] def shouldAddSlotAgainIfBookingWasCancelled(): Unit = {
-////    val scheduled = new Scheduled(randomUuid, LocalDateTime.now, Duration.ofMinutes(10L))
-////    val booked = new Booked(randomUuid, scheduled.getEventId, randomString)
-////    val cancelled = new Cancelled(randomUuid, scheduled.getEventId, randomString)
-////    `given`(scheduled, booked, cancelled)
-////    `then`(List.of(new AvailableSlot(scheduled.getEventId, scheduled.getStartTime, scheduled.getDuration)), repository.getSlotsAvailableOn(LocalDate.now))
-////  }
-////}
+package net.domaincentric.scheduling.readmodel.avialbleslots
+
+import java.time.{ Duration => _, _ }
+import java.util.UUID
+
+import monix.eval.Task
+import monix.execution.Scheduler.Implicits.global
+import net.domaincentric.scheduling.application.eventsourcing.{ EventHandler, EventMetadata }
+import net.domaincentric.scheduling.domain.doctorday.{ SlotBooked, SlotBookingCancelled, SlotScheduled }
+import net.domaincentric.scheduling.eventsourcing.Event
+import net.domaincentric.scheduling.infrastructure.mongodb.MongodbAvailableSlotsRepository
+import net.domaincentric.scheduling.readmodel.availableslots._
+import org.mongodb.scala.{ MongoClient, MongoDatabase }
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AsyncWordSpec
+import org.scalatest.{ Assertion, BeforeAndAfterEach }
+
+import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future }
+
+class ProjectorSpec extends AsyncWordSpec with Matchers with BeforeAndAfterEach {
+
+  override protected def beforeEach(): Unit = {
+    super.beforeEach()
+    Await.result(database.drop().toFuture(), Duration.Inf)
+  }
+
+  def randomId(): UUID      = UUID.randomUUID()
+  implicit val clock: Clock = Clock.fixed(Instant.now(), ZoneOffset.UTC)
+
+  private val today: LocalDate           = LocalDate.now(clock)
+  private val tenAm: LocalTime           = LocalTime.of(10, 0)
+  private val tenAmToday: LocalDateTime  = LocalDateTime.of(today, tenAm)
+  private val tenMinutes: FiniteDuration = 10.minutes
+  private val mongoDbClient              = MongoClient("mongodb://localhost")
+  private val database: MongoDatabase    = mongoDbClient.getDatabase("projections")
+
+  private val repository: Repository = new MongodbAvailableSlotsRepository(database)
+  private val handler: EventHandler  = new Projector(repository)
+
+  private val metadata: EventMetadata = EventMetadata("abc", "123")
+
+  def `given`(events: Event*): Unit = {
+    Await.result(
+      Task
+        .traverse(events) { event =>
+          handler.handle(event, metadata, UUID.randomUUID(), 0L, Instant.now())
+        }
+        .runToFuture,
+      Duration.Inf
+    )
+  }
+
+  def `then`[A](actualResultT: Task[A], expected: A): Future[Assertion] =
+    actualResultT.map(_ shouldEqual expected).runToFuture
+
+  "available slots projector" should {
+    "add slot to the list" in {
+      val scheduled = SlotScheduled(randomId(), randomId(), tenAmToday, tenMinutes)
+      `given`(scheduled)
+      `then`(
+        repository.getAvailableSlotsOn(today),
+        Seq(
+          AvailableSlot(
+            scheduled.dayId,
+            scheduled.slotId,
+            scheduled.startTime.toLocalDate,
+            scheduled.startTime.toLocalTime,
+            scheduled.duration.toString()
+          )
+        )
+      )
+    }
+
+    "hide slot from the list if it was booked" in {
+      val scheduled = SlotScheduled(randomId(), randomId(), tenAmToday, tenMinutes)
+      val booked    = SlotBooked(scheduled.slotId, "John Doe")
+      `given`(scheduled, booked)
+      `then`(repository.getAvailableSlotsOn(today), Seq.empty)
+    }
+
+    "show slot if booking was cancelled" in {
+      val scheduled = SlotScheduled(randomId(), randomId(), tenAmToday, tenMinutes)
+      val booked    = SlotBooked(scheduled.slotId, "John Doe")
+      val cancelled = SlotBookingCancelled(scheduled.slotId, "Can't make it")
+      `given`(scheduled, booked, cancelled)
+      `then`(
+        repository.getAvailableSlotsOn(today),
+        Seq(
+          AvailableSlot(
+            scheduled.dayId,
+            scheduled.slotId,
+            scheduled.startTime.toLocalDate,
+            scheduled.startTime.toLocalTime,
+            scheduled.duration.toString()
+          )
+        )
+      )
+    }
+  }
+}

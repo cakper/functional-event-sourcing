@@ -1,11 +1,11 @@
-package net.domaincentric.scheduling.eventsourcing
+package net.domaincentric.scheduling.application.eventsourcing
 
-import net.domaincentric.scheduling.eventsourcing.Aggregate.Handler
+import net.domaincentric.scheduling.eventsourcing.{ Command, CommandHandler, Error, Event, State }
 
 case class Aggregate[C <: Command, E <: Event, Er <: Error, S <: State[S, E]](
     id: String,
     state: S,
-    handler: Handler[C, E, Er, S],
+    handler: CommandHandler[C, E, Er, S],
     version: Version = Version.`new`,
     changes: Seq[E] = Seq.empty
 ) {
@@ -25,14 +25,4 @@ case class Aggregate[C <: Command, E <: Event, Er <: Error, S <: State[S, E]](
       version = version.incrementBy(changes.length),
       changes = Seq.empty
     )
-}
-
-object Aggregate {
-  type Handler[C <: Command, E <: Event, Er <: Error, S <: State[S, E]] = (S, C) => Either[Er, Seq[E]]
-
-  implicit def eventToResult[E <: Event, Er <: Error](event: E): Either[Er, Seq[E]] = Right(Seq(event))
-
-  implicit def eventsToResult[E <: Event, Er <: Error](events: Seq[E]): Either[Er, Seq[E]] = Right(events)
-
-  implicit def errorToResult[E <: Event, Er <: Error](error: Er): Either[Er, Seq[E]] = Left(error)
 }

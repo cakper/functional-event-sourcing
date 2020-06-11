@@ -11,6 +11,7 @@ libraryDependencies += "org.scalactic"          %% "scalactic"          % "3.1.2
 libraryDependencies += "org.scalatest"          %% "scalatest"          % "3.1.2" % "test"
 libraryDependencies += "com.eventstore"         % "db-client-java"      % "1.0-SNAPSHOT"
 libraryDependencies += "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.1"
+libraryDependencies += "org.mongodb.scala"      %% "mongo-scala-driver" % "2.9.0"
 
 val circeVersion = "0.12.3"
 

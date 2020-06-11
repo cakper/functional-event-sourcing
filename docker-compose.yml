@@ -9,3 +9,9 @@ services:
     ports:
       - "1113:1113"
       - "2113:2113"
+  mong.db:
+    image: mongo
+    environment:
+      - MONGO_INITDB_DATABASE=projections
+    ports:
+      - "27017-27019:27017-27019"

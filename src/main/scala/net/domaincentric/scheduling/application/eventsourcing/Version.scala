@@ -1,4 +1,4 @@
-package net.domaincentric.scheduling.eventsourcing
+package net.domaincentric.scheduling.application.eventsourcing
 
 class Version(val value: Long) extends AnyVal {
   def isNew: Boolean                       = value == -1L

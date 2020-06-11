@@ -8,8 +8,10 @@ import io.circe._
 import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
+import net.domaincentric.scheduling.application.eventsourcing
+import net.domaincentric.scheduling.application.eventsourcing.{ EventEnvelope, EventMetadata }
 import net.domaincentric.scheduling.domain.doctorday.{ DayScheduled, SlotBooked, SlotBookingCancelled, SlotScheduled }
-import net.domaincentric.scheduling.eventsourcing.{ Event, EventEnvelope, EventMetadata }
+import net.domaincentric.scheduling.eventsourcing.Event
 
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
@@ -40,7 +42,7 @@ class EventSerde {
     })(new String(rawEvent.getEventData)).toOption.get
 
     val metadata = decode[EventMetadata](new String(rawEvent.getUserMetadata)).toOption.get
-    EventEnvelope(
+    eventsourcing.EventEnvelope(
       event,
       metadata,
       rawEvent.getEventId,
