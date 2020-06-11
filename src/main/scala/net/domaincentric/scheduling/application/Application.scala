@@ -1,11 +1,17 @@
 package net.domaincentric.scheduling.application
 
+import java.time.LocalDate
+import java.util.UUID
+
 import cats.effect.ExitCode
 import com.eventstore.dbclient._
 import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts
 import io.grpc.netty.shaded.io.netty.handler.ssl.util.InsecureTrustManagerFactory
 import javax.net.ssl.SSLException
 import monix.eval.{ Task, TaskApp }
+import net.domaincentric.scheduling.application.eventsourcing.EventMetadata
+import net.domaincentric.scheduling.domain.aggregate.doctorday.DayScheduled
+import net.domaincentric.scheduling.infrastructure.eventstoredb.{ EventSerde, EventStore }
 
 import scala.compat.java8.FutureConverters._
 import scala.concurrent.duration._
@@ -23,7 +29,17 @@ object Application extends TaskApp {
       new StreamsClient("localhost", 2113, creds, Timeouts.DEFAULT, getClientSslContext)
     }
 
-    val task1 = Task.deferFuture(
+    val eventStore = new EventStore(streamsClient, new EventSerde)
+
+    val streamId = "doctorday-" + UUID.randomUUID()
+    val writeEvents =
+      eventStore.createNewStream(
+        streamId,
+        Seq(DayScheduled(UUID.randomUUID(), "John Doe", LocalDate.now())),
+        EventMetadata("123", "abc")
+      )
+
+    val allSubscription = Task.deferFuture(
       streamsClient
         .subscribeToAll(
           Position.START,
@@ -37,10 +53,10 @@ object Application extends TaskApp {
         .toScala
     )
 
-    val task2 = Task.deferFuture(
+    val streamSubscription = Task.deferFuture(
       streamsClient
         .subscribeToStream(
-          "doctorday-c0623d12",
+          streamId,
           StreamRevision.START,
           false,
           new SubscriptionListener {
@@ -53,8 +69,9 @@ object Application extends TaskApp {
     )
 
     for {
-      _ <- task1.delayResult(5.seconds)
-//      _ <- task2.delayResult(5.seconds)
+      _ <- writeEvents.delayResult(2.seconds)
+      _ <- allSubscription.delayResult(2.seconds)
+      _ <- streamSubscription.delayResult(2.seconds)
     } yield ExitCode.Success
   }
 }
