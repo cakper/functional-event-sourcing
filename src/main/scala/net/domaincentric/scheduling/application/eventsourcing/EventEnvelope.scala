@@ -3,10 +3,8 @@ package net.domaincentric.scheduling.application.eventsourcing
 import java.time.Instant
 import java.util.UUID
 
-import net.domaincentric.scheduling.eventsourcing.Event
-
 case class EventEnvelope(
-    event: Event,
+    event: Any,
     metadata: EventMetadata,
     eventId: UUID,
     position: Version,

@@ -1,8 +1,8 @@
 package net.domaincentric.scheduling.application.eventsourcing
 
-import net.domaincentric.scheduling.eventsourcing.{ Command, CommandHandler, Error, Event, State }
+import net.domaincentric.scheduling.domain.aggregate.{ CommandHandler, State }
 
-case class Aggregate[C <: Command, E <: Event, Er <: Error, S <: State[S, E]](
+case class Aggregate[C, E, Er, S <: State[S, E]](
     id: String,
     state: S,
     handler: CommandHandler[C, E, Er, S],
@@ -11,12 +11,12 @@ case class Aggregate[C <: Command, E <: Event, Er <: Error, S <: State[S, E]](
 ) {
   def handle(command: C): Either[Er, Aggregate[C, E, Er, S]] =
     handler(state, command).map { newEvents =>
-      copy(state = state.apply(newEvents), changes = changes.appendedAll(newEvents))
+      copy(state = newEvents.foldLeft(state)(_.apply(_)), changes = changes.appendedAll(newEvents))
     }
 
   def reconstitute(events: Seq[E]): Aggregate[C, E, Er, S] =
     copy(
-      state = state.apply(events),
+      state = events.foldLeft(state)(_.apply(_)),
       version = version.incrementBy(events.length)
     )
 

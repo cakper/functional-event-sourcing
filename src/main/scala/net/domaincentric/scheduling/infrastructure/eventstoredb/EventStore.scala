@@ -6,7 +6,6 @@ import monix.eval.Task
 import monix.reactive.Observable
 import net.domaincentric.scheduling.application.eventsourcing.{ EventEnvelope, EventMetadata, Version }
 import net.domaincentric.scheduling.application.eventsourcing
-import net.domaincentric.scheduling.eventsourcing.Event
 import net.domaincentric.scheduling.application.eventsourcing.Version._
 
 import scala.compat.java8.FutureConverters._
@@ -36,7 +35,7 @@ class EventStore(val client: StreamsClient, eventSerde: EventSerde) extends even
 
   override def createNewStream(
       streamId: String,
-      events: Seq[Event],
+      events: Seq[Any],
       commandMetadata: EventMetadata
   ): Task[Version] =
     for {
@@ -48,7 +47,7 @@ class EventStore(val client: StreamsClient, eventSerde: EventSerde) extends even
 
   override def appendToStream(
       streamId: String,
-      events: Seq[Event],
+      events: Seq[Any],
       commandMetadata: EventMetadata,
       expectedVersion: Version
   ): Task[Version] =

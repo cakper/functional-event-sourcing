@@ -4,11 +4,10 @@ import java.time.Instant
 import java.util.UUID
 
 import monix.eval.Task
-import net.domaincentric.scheduling.eventsourcing.Event
 
 trait EventHandler {
-  def handle[E <: Event](
-      event: E,
+  def handle(
+      event: Any,
       metadata: EventMetadata,
       eventId: UUID,
       position: Version,

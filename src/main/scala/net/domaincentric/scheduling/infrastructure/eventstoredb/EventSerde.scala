@@ -10,8 +10,7 @@ import io.circe.parser.decode
 import io.circe.syntax._
 import net.domaincentric.scheduling.application.eventsourcing
 import net.domaincentric.scheduling.application.eventsourcing.{ EventEnvelope, EventMetadata }
-import net.domaincentric.scheduling.domain.doctorday.{ DayScheduled, SlotBooked, SlotBookingCancelled, SlotScheduled }
-import net.domaincentric.scheduling.eventsourcing.Event
+import net.domaincentric.scheduling.domain.aggregate.doctorday.{ DayScheduled, SlotBooked, SlotBookingCancelled, SlotScheduled }
 
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
@@ -51,7 +50,7 @@ class EventSerde {
     )
   }
 
-  def serialize(event: Event, metadata: EventMetadata): Try[ProposedEvent] = Try {
+  def serialize(event: Any, metadata: EventMetadata): Try[ProposedEvent] = Try {
     event match {
       case e: DayScheduled         => toProposedEvent("doctorday-day-scheduled", e.asJson, metadata)
       case e: SlotScheduled        => toProposedEvent("doctorday-slot-scheduled", e.asJson, metadata)
