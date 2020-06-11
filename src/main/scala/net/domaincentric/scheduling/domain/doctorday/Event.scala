@@ -5,12 +5,12 @@ import java.util.UUID
 
 import net.domaincentric.scheduling.eventsourcing.{ Event => ESEvent }
 
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.FiniteDuration
 
 sealed trait Event extends ESEvent
 
 case class DayScheduled(eventId: UUID, doctorId: String, date: LocalDate) extends Event
-case class SlotScheduled(eventId: UUID, dayPlannedEventId: UUID, startTime: LocalDateTime, duration: Duration)
+case class SlotScheduled(eventId: UUID, dayPlannedEventId: UUID, startTime: LocalDateTime, duration: FiniteDuration)
     extends Event
 
 case class SlotBooked(eventId: UUID, slotScheduledEventId: UUID, patientId: String)        extends Event

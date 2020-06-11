@@ -7,4 +7,7 @@ class Version(val value: Long) extends AnyVal {
 
 object Version {
   val `new`: Version = new Version(-1L)
+
+  implicit def longToVersion(value: Long): Version   = new Version(value)
+  implicit def versionToLong(version: Version): Long = version.value
 }
