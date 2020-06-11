@@ -19,14 +19,14 @@ case object UnscheduledSlot extends SlotState {
 case class ScheduledSlot(scheduledEventId: UUID, startTime: LocalDateTime, duration: Duration) extends SlotState {
 
   def apply(event: Event): SlotState = event match {
-    case Booked(_, _, patientId) => BookedSlot(scheduledEventId, startTime, duration, patientId)
+    case Booked(_, patientId) => BookedSlot(scheduledEventId, startTime, duration, patientId)
   }
 }
 
 case class BookedSlot(scheduledEventId: UUID, startTime: LocalDateTime, duration: Duration, patientId: String)
     extends SlotState {
   def apply(event: Event): SlotState = event match {
-    case Cancelled(_, _, _) => ScheduledSlot(scheduledEventId, startTime, duration)
+    case Cancelled(_, _) => ScheduledSlot(scheduledEventId, startTime, duration)
   }
 
   def isStarted(clock: Clock): Boolean = LocalDateTime.now(clock).isAfter(startTime)

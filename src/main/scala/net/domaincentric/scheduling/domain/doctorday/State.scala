@@ -19,9 +19,9 @@ case object Unscheduled extends State {
 case class Planned(id: UUID, date: LocalDate, slots: Slots) extends State {
 
   def apply(event: Event): State = event match {
-    case slot: SlotScheduled                => copy(slots = slots.add(slot))
-    case SlotBooked(_, slotId, _)           => copy(slots = slots.markAsBooked(slotId))
-    case SlotBookingCancelled(_, slotId, _) => copy(slots = slots.markAsAvailable(slotId))
+    case slot: SlotScheduled             => copy(slots = slots.add(slot))
+    case SlotBooked(slotId, _)           => copy(slots = slots.markAsBooked(slotId))
+    case SlotBookingCancelled(slotId, _) => copy(slots = slots.markAsAvailable(slotId))
   }
 
   def hasAvailableSlot(slotId: UUID): Boolean = slots.value.filterNot(_.booked).exists(_.eventId == slotId)
@@ -55,7 +55,7 @@ object Planned {
       })
 
     def add(slot: SlotScheduled): Slots =
-      Slots(value.appended(Slot(slot.eventId, slot.startTime.toLocalTime, slot.duration)))
+      Slots(value.appended(Slot(slot.slotId, slot.startTime.toLocalTime, slot.duration)))
   }
   object Slots {
     def empty: Slots = Slots(Seq.empty)

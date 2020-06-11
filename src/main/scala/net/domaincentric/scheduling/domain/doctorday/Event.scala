@@ -9,9 +9,7 @@ import scala.concurrent.duration.FiniteDuration
 
 sealed trait Event extends ESEvent
 
-case class DayScheduled(eventId: UUID, doctorId: String, date: LocalDate) extends Event
-case class SlotScheduled(eventId: UUID, dayPlannedEventId: UUID, startTime: LocalDateTime, duration: FiniteDuration)
-    extends Event
-
-case class SlotBooked(eventId: UUID, slotScheduledEventId: UUID, patientId: String)        extends Event
-case class SlotBookingCancelled(eventId: UUID, slotScheduledEventId: UUID, reason: String) extends Event
+case class DayScheduled(dayId: UUID, doctorId: String, date: LocalDate)                                 extends Event
+case class SlotScheduled(slotId: UUID, dayId: UUID, startTime: LocalDateTime, duration: FiniteDuration) extends Event
+case class SlotBooked(slotId: UUID, patientId: String)                                                  extends Event
+case class SlotBookingCancelled(slotId: UUID, reason: String)                                           extends Event

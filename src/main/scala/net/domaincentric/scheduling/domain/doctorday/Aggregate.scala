@@ -14,8 +14,8 @@ object Aggregate {
       val dayPlannedEventId = idGen.next()
       DayScheduled(dayPlannedEventId, scheduleDay.doctorId, scheduleDay.date) :: scheduleDay.slots.map { slot =>
         SlotScheduled(
-          idGen.next(),
           dayPlannedEventId,
+          idGen.next(),
           LocalDateTime.of(scheduleDay.date, slot.startTime),
           slot.duration
         )
@@ -24,19 +24,19 @@ object Aggregate {
     case (_: Planned, _: ScheduleDay) => DayAlreadyScheduled
 
     case (state: Planned, ScheduleSlot(startTime, duration)) if state.doesNotOverlap(startTime, duration) =>
-      SlotScheduled(idGen.next(), state.id, LocalDateTime.of(state.date, startTime), duration)
+      SlotScheduled(state.id, idGen.next(), LocalDateTime.of(state.date, startTime), duration)
 
     case (_: Planned, _: ScheduleSlot) => SlotOverlapped
 
     case (state: Planned, BookSlot(slotId, patientId)) if state.hasAvailableSlot(slotId) =>
-      SlotBooked(idGen.next(), slotId, patientId)
+      SlotBooked(slotId, patientId)
 
     case (state: Planned, BookSlot(slotId, _)) if state.hasBookedSlot(slotId) => SlotAlreadyBooked
 
     case (_: Planned, _: BookSlot) => SlotNotScheduled
 
     case (state: Planned, CancelSlotBooking(slotId, reason)) if state.hasBookedSlot(slotId) =>
-      SlotBookingCancelled(idGen.next(), slotId, reason)
+      SlotBookingCancelled(slotId, reason)
 
     case (_: Planned, _: CancelSlotBooking) => SlotNotBooked
   }

@@ -34,7 +34,7 @@ class SlotAggregateSpec extends AggregateSpec[Command, Event, Error, SlotState] 
       val book      = Book(randomString())
       `given`(scheduled)
       `when`(book)
-      `then`(Booked(nextUuid(), scheduled.eventId, book.patientId))
+      `then`(Booked(scheduled.slotId, book.patientId))
     }
 
     "can't be booked if it's not scheduled" in {
@@ -44,7 +44,7 @@ class SlotAggregateSpec extends AggregateSpec[Command, Event, Error, SlotState] 
 
     "can't be double booked" in {
       val scheduled = Scheduled(nextUuid(), LocalDateTime.now(clock), 10.minutes)
-      val booked    = Booked(nextUuid(), scheduled.eventId, randomString())
+      val booked    = Booked(scheduled.slotId, randomString())
       val book      = Book(randomString())
       `given`(scheduled, booked)
       `when`(book)
@@ -53,21 +53,21 @@ class SlotAggregateSpec extends AggregateSpec[Command, Event, Error, SlotState] 
 
     "can be cancelled" in {
       val scheduled = Scheduled(nextUuid(), LocalDateTime.now(clock), 10.minutes)
-      val booked    = Booked(nextUuid(), scheduled.eventId, randomString())
+      val booked    = Booked(scheduled.slotId, randomString())
       val cancel    = Cancel("No longer needed")
       `given`(scheduled, booked)
       `when`(cancel)
-      `then`(Cancelled(nextUuid(), scheduled.eventId, "No longer needed"))
+      `then`(Cancelled(scheduled.slotId, "No longer needed"))
     }
 
     "cancelled slot can be booked again" in {
       val scheduled = Scheduled(nextUuid(), LocalDateTime.now(clock), 10.minutes)
-      val booked    = Booked(nextUuid(), scheduled.eventId, randomString())
-      val cancelled = Cancelled(nextUuid(), scheduled.eventId, "No longer needed")
+      val booked    = Booked(scheduled.slotId, randomString())
+      val cancelled = Cancelled(scheduled.slotId, "No longer needed")
       val book      = Book(randomString())
       `given`(scheduled, booked, cancelled)
       `when`(book)
-      `then`(Booked(nextUuid(), scheduled.eventId, book.patientId))
+      `then`(Booked(scheduled.slotId, book.patientId))
     }
 
     "can't be cancelled if wasn't booked" in {
@@ -79,7 +79,7 @@ class SlotAggregateSpec extends AggregateSpec[Command, Event, Error, SlotState] 
 
     "can't be cancelled after start time" in {
       val scheduled = Scheduled(nextUuid(), LocalDateTime.now(clock).minusHours(1), 10.minutes)
-      val booked    = Booked(nextUuid(), scheduled.eventId, randomString())
+      val booked    = Booked(scheduled.slotId, randomString())
       val cancel    = Cancel("No longer needed")
       `given`(scheduled, booked)
       `when`(cancel)

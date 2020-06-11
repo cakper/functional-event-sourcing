@@ -14,9 +14,9 @@ object SlotAggregate {
     case (UnscheduledSlot, Schedule(startTime, duration))           => Scheduled(uuidGenerator.next(), startTime, duration)
     case (UnscheduledSlot, _)                                       => SlotNotScheduled()
     case (_: BookedSlot, _: Book)                                   => SlotAlreadyBooked()
-    case (ScheduledSlot(eventId, _, _), Book(patientId))            => Booked(uuidGenerator.next(), eventId, patientId)
+    case (ScheduledSlot(slotId, _, _), Book(patientId))             => Booked(slotId, patientId)
     case (_: ScheduledSlot, _: Cancel)                              => SlotNotBooked()
     case (booked: BookedSlot, _: Cancel) if booked.isStarted(clock) => SlotAlreadyStarted()
-    case (BookedSlot(eventId, _, _, _), Cancel(reason))             => Cancelled(uuidGenerator.next(), eventId, reason)
+    case (BookedSlot(eventId, _, _, _), Cancel(reason))             => Cancelled(eventId, reason)
   }
 }
