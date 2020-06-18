@@ -17,11 +17,13 @@ class AvailableSlotsProjector(val repository: Repository) extends EventHandler {
       occurredAt: Instant
   ): Task[Unit] = event match {
     case e: SlotScheduled =>
-      repository.addSlot(
-        AvailableSlot(e.dayId, e.slotId, e.startTime.toLocalDate, e.startTime.toLocalTime, e.duration.toString())
-      )
-    case e: SlotBooked           => repository.hideSlot(e.slotId)
-    case e: SlotBookingCancelled => repository.showSlot(e.slotId)
+      repository
+        .addSlot(
+          AvailableSlot(e.dayId, e.slotId, e.startTime.toLocalDate, e.startTime.toLocalTime, e.duration.toString())
+        )
+        .map(_ => println("slot added"))
+    case e: SlotBooked           => repository.hideSlot(e.slotId).map(_ => println("slot hidden"))
+    case e: SlotBookingCancelled => repository.showSlot(e.slotId).map(_ => println("slot shown"))
     case _                       => Task.unit
   }
 }

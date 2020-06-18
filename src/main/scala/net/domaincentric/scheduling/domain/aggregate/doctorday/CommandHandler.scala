@@ -10,33 +10,33 @@ import net.domaincentric.scheduling.domain.service.UuidGenerator
 class CommandHandler(implicit idGen: UuidGenerator) extends aggregate.CommandHandler[Command, Event, Error, State] {
   override def apply(state: State, command: Command): Either[Error, Seq[Event]] = (state, command) match {
     case (Unscheduled, scheduleDay: ScheduleDay) =>
-      val dayPlannedEventId: UUID = idGen.next()
-      DayScheduled(dayPlannedEventId, scheduleDay.doctorId, scheduleDay.date) :: scheduleDay.slots.map { slot =>
+      val dayScheduledId: UUID = idGen.next()
+      Scheduled(dayScheduledId, scheduleDay.doctorId, scheduleDay.date) :: scheduleDay.slots.map { slot =>
         SlotScheduled(
-          dayPlannedEventId,
+          dayScheduledId,
           idGen.next(),
           LocalDateTime.of(scheduleDay.date, slot.startTime),
           slot.duration
         )
       }.toList
 
-    case (_: Planned, _: ScheduleDay) => DayAlreadyScheduled
+    case (_: Scheduled, _: ScheduleDay) => DayAlreadyScheduled
 
-    case (state: Planned, ScheduleSlot(startTime, duration)) if state.doesNotOverlap(startTime, duration) =>
+    case (state: Scheduled, ScheduleSlot(startTime, duration)) if state.doesNotOverlap(startTime, duration) =>
       SlotScheduled(state.id, idGen.next(), LocalDateTime.of(state.date, startTime), duration)
 
-    case (_: Planned, _: ScheduleSlot) => SlotOverlapped
+    case (_: Scheduled, _: ScheduleSlot) => SlotOverlapped
 
-    case (state: Planned, BookSlot(slotId, patientId)) if state.hasAvailableSlot(slotId) =>
+    case (state: Scheduled, BookSlot(slotId, patientId)) if state.hasAvailableSlot(slotId) =>
       SlotBooked(slotId, patientId)
 
-    case (state: Planned, BookSlot(slotId, _)) if state.hasBookedSlot(slotId) => SlotAlreadyBooked
+    case (state: Scheduled, BookSlot(slotId, _)) if state.hasBookedSlot(slotId) => SlotAlreadyBooked
 
-    case (_: Planned, _: BookSlot) => SlotNotScheduled
+    case (_: Scheduled, _: BookSlot) => SlotNotScheduled
 
-    case (state: Planned, CancelSlotBooking(slotId, reason)) if state.hasBookedSlot(slotId) =>
+    case (state: Scheduled, CancelSlotBooking(slotId, reason)) if state.hasBookedSlot(slotId) =>
       SlotBookingCancelled(slotId, reason)
 
-    case (_: Planned, _: CancelSlotBooking) => SlotNotBooked
+    case (_: Scheduled, _: CancelSlotBooking) => SlotNotBooked
   }
 }

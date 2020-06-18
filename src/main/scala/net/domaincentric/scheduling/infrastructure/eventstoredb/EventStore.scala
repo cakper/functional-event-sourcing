@@ -4,15 +4,17 @@ import cats.implicits._
 import com.eventstore.dbclient._
 import monix.eval.Task
 import monix.reactive.Observable
-import net.domaincentric.scheduling.application.eventsourcing.{ EventEnvelope, EventMetadata, Version }
 import net.domaincentric.scheduling.application.eventsourcing
 import net.domaincentric.scheduling.application.eventsourcing.Version._
+import net.domaincentric.scheduling.application.eventsourcing.{ EventEnvelope, EventMetadata, Version }
 
 import scala.compat.java8.FutureConverters._
 import scala.jdk.CollectionConverters._
 
 class EventStore(val client: StreamsClient, eventSerde: EventSerde) extends eventsourcing.EventStore {
-  val pageSize = 2048
+  private val pageSize = 4096
+  private val subscriptionFilter: SubscriptionFilter =
+    new SubscriptionFilterBuilder().withEventTypePrefix(eventSerde.prefix).build()
 
   override def readFromStream(streamId: String): Observable[EventEnvelope] = {
     Observable
@@ -57,4 +59,12 @@ class EventStore(val client: StreamsClient, eventSerde: EventSerde) extends even
         client.appendToStream(streamId, new StreamRevision(expectedVersion), events.asJava).toScala
       }
     } yield result.getNextExpectedRevision.getValueUnsigned
+
+  override def subscribeToAll(fromPosition: Position = Position.START): Observable[EventEnvelope] = {
+    SubscriptionObservable(
+      client.subscribeToAll(fromPosition, false, _, subscriptionFilter)
+    ).mapEval { resolvedEvent =>
+      Task.fromTry(eventSerde.deserialize(resolvedEvent))
+    }
+  }
 }

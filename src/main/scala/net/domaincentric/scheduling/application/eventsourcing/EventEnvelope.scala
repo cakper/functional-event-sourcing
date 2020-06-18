@@ -7,6 +7,6 @@ case class EventEnvelope(
     event: Any,
     metadata: EventMetadata,
     eventId: UUID,
-    position: Version,
+    version: Version,
     occurredAt: Instant
 )

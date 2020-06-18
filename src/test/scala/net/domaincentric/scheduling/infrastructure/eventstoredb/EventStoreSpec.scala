@@ -9,7 +9,7 @@ import io.grpc.netty.shaded.io.netty.handler.ssl.util.InsecureTrustManagerFactor
 import javax.net.ssl.SSLException
 import monix.execution.Scheduler.Implicits.global
 import net.domaincentric.scheduling.application.eventsourcing.{ EventMetadata, Version }
-import net.domaincentric.scheduling.domain.aggregate.doctorday.{ DayScheduled, SlotScheduled }
+import net.domaincentric.scheduling.domain.aggregate.doctorday.{ Scheduled, SlotScheduled }
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AsyncWordSpec
 
@@ -34,7 +34,7 @@ class EventStoreSpec extends AsyncWordSpec with Matchers {
       val streamId = "doctorday-" + UUID.randomUUID().toString.split("-").head
 
       val eventsToWrite = Seq(
-        DayScheduled(UUID.randomUUID(), "John Done", LocalDate.now()),
+        Scheduled(UUID.randomUUID(), "John Done", LocalDate.now()),
         SlotScheduled(UUID.randomUUID(), UUID.randomUUID(), LocalDateTime.now(), 10.minutes)
       )
       val commandMetadata = EventMetadata("abc", "123")
@@ -51,7 +51,7 @@ class EventStoreSpec extends AsyncWordSpec with Matchers {
     "append to an existing stream" in {
       val streamId = "doctorday-" + UUID.randomUUID().toString.split("-").head
 
-      val firstWrite    = Seq(DayScheduled(UUID.randomUUID(), "John Done", LocalDate.now()))
+      val firstWrite    = Seq(Scheduled(UUID.randomUUID(), "John Done", LocalDate.now()))
       val firstMetadata = EventMetadata("abc", "123")
 
       val secondWrite    = Seq(SlotScheduled(UUID.randomUUID(), UUID.randomUUID(), LocalDateTime.now(), 10.minutes))

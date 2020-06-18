@@ -4,7 +4,7 @@ import java.time.{ LocalDate, LocalTime }
 import java.util.UUID
 
 import net.domaincentric.scheduling.domain.aggregate
-import net.domaincentric.scheduling.domain.aggregate.doctorday.Planned.{ Slot, Slots }
+import net.domaincentric.scheduling.domain.aggregate.doctorday.Scheduled.{ Slot, Slots }
 
 import scala.concurrent.duration.Duration
 
@@ -12,12 +12,12 @@ sealed trait State extends aggregate.State[State, Event]
 
 case object Unscheduled extends State {
   def apply(event: Event): State = event match {
-    case DayScheduled(id, _, date) => Planned(id, date, Slots.empty)
+    case DayScheduled(id, _, date) => Scheduled(id, date, Slots.empty)
     case _                         => this
   }
 }
 
-case class Planned(id: UUID, date: LocalDate, slots: Slots) extends State {
+case class Scheduled(id: UUID, date: LocalDate, slots: Slots) extends State {
 
   def apply(event: Event): State = event match {
     case slot: SlotScheduled             => copy(slots = slots.add(slot))
@@ -32,7 +32,7 @@ case class Planned(id: UUID, date: LocalDate, slots: Slots) extends State {
     !slots.value.exists(_.overlapsWith(startTime, duration))
 }
 
-object Planned {
+object Scheduled {
   case class Slot(eventId: UUID, startTime: LocalTime, duration: Duration, booked: Boolean = false) {
     def overlapsWith(otherStartTime: LocalTime, otherDuration: Duration): Boolean = {
       val firstStart  = startTime.toSecondOfDay

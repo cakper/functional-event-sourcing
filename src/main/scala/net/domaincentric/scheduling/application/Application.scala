@@ -1,20 +1,16 @@
 package net.domaincentric.scheduling.application
 
-import java.time.LocalDate
-import java.util.UUID
-
 import cats.effect.ExitCode
 import com.eventstore.dbclient._
 import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts
 import io.grpc.netty.shaded.io.netty.handler.ssl.util.InsecureTrustManagerFactory
 import javax.net.ssl.SSLException
 import monix.eval.{ Task, TaskApp }
-import net.domaincentric.scheduling.application.eventsourcing.EventMetadata
-import net.domaincentric.scheduling.domain.aggregate.doctorday.DayScheduled
+import monix.reactive.Consumer
+import net.domaincentric.scheduling.application.eventhandlers.AvailableSlotsProjector
 import net.domaincentric.scheduling.infrastructure.eventstoredb.{ EventSerde, EventStore }
-
-import scala.compat.java8.FutureConverters._
-import scala.concurrent.duration._
+import net.domaincentric.scheduling.infrastructure.mongodb.MongodbAvailableSlotsRepository
+import org.mongodb.scala.{ MongoClient, MongoDatabase }
 
 object Application extends TaskApp {
   override def run(args: List[String]): Task[ExitCode] = {
@@ -31,47 +27,21 @@ object Application extends TaskApp {
 
     val eventStore = new EventStore(streamsClient, new EventSerde)
 
-    val streamId = "doctorday-" + UUID.randomUUID()
-    val writeEvents =
-      eventStore.createNewStream(
-        streamId,
-        Seq(DayScheduled(UUID.randomUUID(), "John Doe", LocalDate.now())),
-        EventMetadata("123", "abc")
-      )
+    val mongoDbClient            = MongoClient("mongodb://localhost")
+    val availableSlotsRepository = new MongodbAvailableSlotsRepository(mongoDbClient.getDatabase("projections"))
+    val availableSlotsProjector  = new AvailableSlotsProjector(availableSlotsRepository)
 
-    val allSubscription = Task.deferFuture(
-      streamsClient
-        .subscribeToAll(
-          Position.START,
-          true,
-          new SubscriptionListener {
-            override def onError(subscription: Subscription, throwable: Throwable): Unit = println(throwable)
-            override def onEvent(subscription: Subscription, event: ResolvedEvent): Unit = println(event)
-            override def onCancelled(subscription: Subscription): Unit                   = println("cancelled")
-          }
-        )
-        .toScala
-    )
+    (for {
+      _ <- eventStore
+        .subscribeToAll()
+        .consumeWith(Consumer.foreachTask { envelope =>
+          availableSlotsProjector
+            .handle(envelope.event, envelope.metadata, envelope.eventId, envelope.version, envelope.occurredAt)
+        })
 
-    val streamSubscription = Task.deferFuture(
-      streamsClient
-        .subscribeToStream(
-          streamId,
-          StreamRevision.START,
-          false,
-          new SubscriptionListener {
-            override def onError(subscription: Subscription, throwable: Throwable): Unit = println(throwable)
-            override def onEvent(subscription: Subscription, event: ResolvedEvent): Unit = println(event.getEvent)
-            override def onCancelled(subscription: Subscription): Unit                   = println("cancelled")
-          }
-        )
-        .toScala
-    )
-
-    for {
-      _ <- writeEvents.delayResult(2.seconds)
-      _ <- allSubscription.delayResult(2.seconds)
-      _ <- streamSubscription.delayResult(2.seconds)
-    } yield ExitCode.Success
+    } yield ExitCode.Success)
+      .guarantee {
+        Task.parZip2(Task.eval(streamsClient.shutdown()), Task.eval(mongoDbClient.close())).map(_ => ())
+      }
   }
 }
