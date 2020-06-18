@@ -10,7 +10,7 @@ import io.circe.parser.decode
 import io.circe.syntax._
 import net.domaincentric.scheduling.application.eventsourcing
 import net.domaincentric.scheduling.application.eventsourcing.{ EventEnvelope, EventMetadata }
-import net.domaincentric.scheduling.domain.aggregate.doctorday.{ Scheduled, SlotBooked, SlotBookingCancelled, SlotScheduled }
+import net.domaincentric.scheduling.domain.aggregate.doctorday.{ DayScheduled, SlotBooked, SlotBookingCancelled, SlotScheduled }
 
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
@@ -36,7 +36,7 @@ class EventSerde {
   def deserialize(resolvedEvent: ResolvedEvent): Try[EventEnvelope] = Try {
     val rawEvent = resolvedEvent.getEvent
     val event = (rawEvent.getEventType match {
-      case s"$prefix-day-scheduled"          => decode[Scheduled] _
+      case s"$prefix-day-scheduled"          => decode[DayScheduled] _
       case s"$prefix-slot-scheduled"         => decode[SlotScheduled] _
       case s"$prefix-slot-booked"            => decode[SlotBooked] _
       case s"$prefix-slot-booking-cancelled" => decode[SlotBookingCancelled] _
@@ -54,7 +54,7 @@ class EventSerde {
 
   def serialize(event: Any, metadata: EventMetadata): Try[ProposedEvent] = Try {
     event match {
-      case e: Scheduled            => toProposedEvent(s"$prefix-day-scheduled", e.asJson, metadata)
+      case e: DayScheduled         => toProposedEvent(s"$prefix-day-scheduled", e.asJson, metadata)
       case e: SlotScheduled        => toProposedEvent(s"$prefix-slot-scheduled", e.asJson, metadata)
       case e: SlotBooked           => toProposedEvent(s"$prefix-slot-booked", e.asJson, metadata)
       case e: SlotBookingCancelled => toProposedEvent(s"$prefix-slot-booking-cancelled", e.asJson, metadata)

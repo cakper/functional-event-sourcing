@@ -11,7 +11,7 @@ class CommandHandler(implicit idGen: UuidGenerator) extends aggregate.CommandHan
   override def apply(state: State, command: Command): Either[Error, Seq[Event]] = (state, command) match {
     case (Unscheduled, scheduleDay: ScheduleDay) =>
       val dayScheduledId: UUID = idGen.next()
-      Scheduled(dayScheduledId, scheduleDay.doctorId, scheduleDay.date) :: scheduleDay.slots.map { slot =>
+      DayScheduled(dayScheduledId, scheduleDay.doctorId, scheduleDay.date) :: scheduleDay.slots.map { slot =>
         SlotScheduled(
           dayScheduledId,
           idGen.next(),
