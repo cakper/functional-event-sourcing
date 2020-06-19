@@ -4,7 +4,7 @@ import java.time.{ Clock, Instant, ZoneOffset }
 import java.util.UUID
 
 import net.domaincentric.scheduling.application.eventsourcing.Aggregate
-import net.domaincentric.scheduling.domain.service.ReplayableUuidGenerator
+import net.domaincentric.scheduling.test.ReplayableUuidGenerator
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{ Assertion, BeforeAndAfterEach }

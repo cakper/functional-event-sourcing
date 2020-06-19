@@ -5,25 +5,13 @@ import java.time.{ Duration => _, _ }
 import net.domaincentric.scheduling.application.eventsourcing.EventHandler
 import net.domaincentric.scheduling.domain.aggregate.doctorday._
 import net.domaincentric.scheduling.domain.readmodel.avialbleslots
-import net.domaincentric.scheduling.domain.readmodel.avialbleslots.Repository
-import net.domaincentric.scheduling.domain.service.{ RandomUuidGenerator, UuidGenerator }
+import net.domaincentric.scheduling.domain.readmodel.avialbleslots.{ AvailableSlot, Repository }
+import net.domaincentric.scheduling.test.{ MongoDatabaseSpec, ProjectorSpec }
 import net.domaincentric.scheduling.infrastructure.mongodb.MongodbAvailableSlotsRepository
-import org.mongodb.scala.{ MongoClient, MongoDatabase }
-import org.scalatest.BeforeAndAfterEach
 
-import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class AvailableSlotsProjectorSpec extends ProjectorSpec with BeforeAndAfterEach {
-  private val database: MongoDatabase = MongoClient("mongodb://localhost").getDatabase("projections")
-
-  override protected def beforeEach(): Unit = {
-    super.beforeEach()
-    Await.result(database.drop().toFuture(), Duration.Inf)
-  }
-
-  implicit val uuidGenerator: UuidGenerator = RandomUuidGenerator
-  implicit val clock: Clock                 = Clock.fixed(Instant.now(), ZoneOffset.UTC)
+class AvailableSlotsProjectorSpec extends ProjectorSpec with MongoDatabaseSpec {
 
   val today: LocalDate           = LocalDate.now(clock)
   val tenAm: LocalTime           = LocalTime.of(10, 0)
@@ -40,7 +28,7 @@ class AvailableSlotsProjectorSpec extends ProjectorSpec with BeforeAndAfterEach 
       `then`(
         repository.getAvailableSlotsOn(today),
         Seq(
-          avialbleslots.AvailableSlot(
+          AvailableSlot(
             scheduled.dayId,
             scheduled.slotId,
             scheduled.startTime.toLocalDate,

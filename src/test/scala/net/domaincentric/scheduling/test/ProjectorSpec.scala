@@ -1,11 +1,12 @@
-package net.domaincentric.scheduling.application.eventhandlers
+package net.domaincentric.scheduling.test
 
-import java.time.Instant
+import java.time.{ Clock, Instant, ZoneOffset }
 import java.util.UUID
 
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
 import net.domaincentric.scheduling.application.eventsourcing.{ EventHandler, EventMetadata }
+import net.domaincentric.scheduling.domain.service.{ RandomUuidGenerator, UuidGenerator }
 import org.scalatest.Assertion
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AsyncWordSpec
@@ -16,6 +17,9 @@ import scala.concurrent.{ Await, Future }
 abstract class ProjectorSpec extends AsyncWordSpec with Matchers {
   def handler: EventHandler
   val metadata: EventMetadata = EventMetadata("abc", "123")
+
+  implicit val uuidGenerator: UuidGenerator = RandomUuidGenerator
+  implicit val clock: Clock                 = Clock.fixed(Instant.now(), ZoneOffset.UTC)
 
   def `given`(events: Any*): Unit = {
     Await.result(

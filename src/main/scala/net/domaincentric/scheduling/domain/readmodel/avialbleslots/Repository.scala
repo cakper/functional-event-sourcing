@@ -1,7 +1,6 @@
 package net.domaincentric.scheduling.domain.readmodel.avialbleslots
 
 import java.time.LocalDate
-import java.util.UUID
 
 import monix.eval.Task
 import net.domaincentric.scheduling.domain.aggregate.doctorday.SlotId

@@ -16,11 +16,13 @@ case class SlotBookingCancelled(slotId: SlotId, reason: String)                 
 case class DayScheduleCancelled(dayId: DayId, reason: String)                                              extends Event
 
 case class DayId(value: UUID)
+
 object DayId {
   def create(implicit uuidGenerator: UuidGenerator): DayId = DayId(uuidGenerator.next())
 }
 
 case class SlotId(value: UUID)
+
 object SlotId {
   def create(implicit uuidGenerator: UuidGenerator): SlotId = SlotId(uuidGenerator.next())
 }

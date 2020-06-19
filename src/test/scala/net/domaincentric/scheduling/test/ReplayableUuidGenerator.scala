@@ -1,6 +1,8 @@
-package net.domaincentric.scheduling.domain.service
+package net.domaincentric.scheduling.test
 
 import java.util.UUID
+
+import net.domaincentric.scheduling.domain.service.UuidGenerator
 
 class ReplayableUuidGenerator() extends UuidGenerator {
   private var replayMode: Boolean = false
