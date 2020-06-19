@@ -6,12 +6,12 @@ import net.domaincentric.scheduling.application.eventsourcing.EventHandler
 import net.domaincentric.scheduling.domain.aggregate.doctorday._
 import net.domaincentric.scheduling.domain.readmodel.avialbleslots
 import net.domaincentric.scheduling.domain.readmodel.avialbleslots.{ AvailableSlot, Repository }
-import net.domaincentric.scheduling.test.{ MongoDatabaseSpec, ProjectorSpec }
+import net.domaincentric.scheduling.test.{ EventHandlerSpec, MongoDatabaseSpec }
 import net.domaincentric.scheduling.infrastructure.mongodb.MongodbAvailableSlotsRepository
 
 import scala.concurrent.duration._
 
-class AvailableSlotsProjectorSpec extends ProjectorSpec with MongoDatabaseSpec {
+class AvailableSlotsProjectorSpec extends EventHandlerSpec with MongoDatabaseSpec {
 
   val today: LocalDate           = LocalDate.now(clock)
   val tenAm: LocalTime           = LocalTime.of(10, 0)
@@ -26,16 +26,17 @@ class AvailableSlotsProjectorSpec extends ProjectorSpec with MongoDatabaseSpec {
       val scheduled = SlotScheduled(SlotId.create, DayId.create, tenAmToday, tenMinutes)
       `given`(scheduled)
       `then`(
-        repository.getAvailableSlotsOn(today),
-        Seq(
-          AvailableSlot(
-            scheduled.dayId,
-            scheduled.slotId,
-            scheduled.startTime.toLocalDate,
-            scheduled.startTime.toLocalTime,
-            scheduled.duration.toString()
+        repository.getAvailableSlotsOn(today).map { result =>
+          result shouldEqual Seq(
+            AvailableSlot(
+              scheduled.dayId,
+              scheduled.slotId,
+              scheduled.startTime.toLocalDate,
+              scheduled.startTime.toLocalTime,
+              scheduled.duration.toString()
+            )
           )
-        )
+        }
       )
     }
 
@@ -43,7 +44,7 @@ class AvailableSlotsProjectorSpec extends ProjectorSpec with MongoDatabaseSpec {
       val scheduled = SlotScheduled(SlotId.create, DayId.create, tenAmToday, tenMinutes)
       val booked    = SlotBooked(scheduled.slotId, "John Doe")
       `given`(scheduled, booked)
-      `then`(repository.getAvailableSlotsOn(today), Seq.empty)
+      `then`(repository.getAvailableSlotsOn(today).map(_ shouldEqual Seq.empty))
     }
 
     "show slot if booking was cancelled" in {
@@ -52,16 +53,17 @@ class AvailableSlotsProjectorSpec extends ProjectorSpec with MongoDatabaseSpec {
       val cancelled = SlotBookingCancelled(scheduled.slotId, "Can't make it")
       `given`(scheduled, booked, cancelled)
       `then`(
-        repository.getAvailableSlotsOn(today),
-        Seq(
-          avialbleslots.AvailableSlot(
-            scheduled.dayId,
-            scheduled.slotId,
-            scheduled.startTime.toLocalDate,
-            scheduled.startTime.toLocalTime,
-            scheduled.duration.toString()
+        repository.getAvailableSlotsOn(today).map { result =>
+          result shouldEqual Seq(
+            avialbleslots.AvailableSlot(
+              scheduled.dayId,
+              scheduled.slotId,
+              scheduled.startTime.toLocalDate,
+              scheduled.startTime.toLocalTime,
+              scheduled.duration.toString()
+            )
           )
-        )
+        }
       )
     }
   }

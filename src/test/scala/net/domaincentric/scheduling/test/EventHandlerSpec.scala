@@ -1,7 +1,6 @@
 package net.domaincentric.scheduling.test
 
 import java.time.{ Clock, Instant, ZoneOffset }
-import java.util.UUID
 
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
@@ -13,11 +12,12 @@ import org.scalatest.wordspec.AsyncWordSpec
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, Future }
 
-abstract class ProcessManagerSpec extends AsyncWordSpec with Matchers {
+abstract class EventHandlerSpec extends AsyncWordSpec with Matchers {
+  def handler: EventHandler
+
   implicit val uuidGenerator: ReplayableUuidGenerator = new ReplayableUuidGenerator()
   implicit val clock: Clock                           = Clock.fixed(Instant.now(), ZoneOffset.UTC)
 
-  def handler: EventHandler
   var metadata: EventMetadata = _
 
   private def genMetadata() =

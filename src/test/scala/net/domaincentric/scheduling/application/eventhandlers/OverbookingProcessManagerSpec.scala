@@ -5,13 +5,13 @@ import java.time.{ LocalDate, LocalDateTime, LocalTime }
 import net.domaincentric.scheduling.application.eventsourcing.{ CommandMetadata, EventHandler }
 import net.domaincentric.scheduling.domain.aggregate.doctorday.{ CancelSlotBooking, DayId, SlotBooked, SlotBookingCancelled, SlotId, SlotScheduled }
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository
-import net.domaincentric.scheduling.test.{ DummyCommandBus, MongoDatabaseSpec, ProcessManagerSpec }
+import net.domaincentric.scheduling.test.{ DummyCommandBus, MongoDatabaseSpec, EventHandlerSpec }
 import net.domaincentric.scheduling.infrastructure.mongodb.MongoDbBookedSlotsRepository
 import net.domaincentric.scheduling.test.DummyCommandBus.SentCommand
 
 import scala.concurrent.duration._
 
-class OverbookingProcessManagerSpec extends ProcessManagerSpec with MongoDatabaseSpec {
+class OverbookingProcessManagerSpec extends EventHandlerSpec with MongoDatabaseSpec {
   val today: LocalDate           = LocalDate.now(clock)
   val tenAm: LocalTime           = LocalTime.of(10, 0)
   val tenAmToday: LocalDateTime  = LocalDateTime.of(today, tenAm)
