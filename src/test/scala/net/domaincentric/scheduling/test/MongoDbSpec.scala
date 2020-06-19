@@ -6,7 +6,7 @@ import org.scalatest.{ BeforeAndAfterEach, Suite }
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
-trait MongoDatabaseSpec extends BeforeAndAfterEach {
+trait MongoDbSpec extends BeforeAndAfterEach {
   this: Suite =>
   val database: MongoDatabase = MongoClient("mongodb://localhost").getDatabase("projections")
 

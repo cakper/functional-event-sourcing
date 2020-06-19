@@ -6,12 +6,12 @@ import net.domaincentric.scheduling.application.eventsourcing.EventHandler
 import net.domaincentric.scheduling.domain.aggregate.doctorday._
 import net.domaincentric.scheduling.domain.readmodel.avialbleslots
 import net.domaincentric.scheduling.domain.readmodel.avialbleslots.{ AvailableSlot, Repository }
-import net.domaincentric.scheduling.test.{ EventHandlerSpec, MongoDatabaseSpec }
+import net.domaincentric.scheduling.test.{ EventHandlerSpec, MongoDbSpec }
 import net.domaincentric.scheduling.infrastructure.mongodb.MongodbAvailableSlotsRepository
 
 import scala.concurrent.duration._
 
-class AvailableSlotsProjectorSpec extends EventHandlerSpec with MongoDatabaseSpec {
+class AvailableSlotsProjectorSpec extends EventHandlerSpec with MongoDbSpec {
 
   val today: LocalDate           = LocalDate.now(clock)
   val tenAm: LocalTime           = LocalTime.of(10, 0)

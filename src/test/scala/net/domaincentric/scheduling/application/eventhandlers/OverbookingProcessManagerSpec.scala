@@ -3,25 +3,25 @@ package net.domaincentric.scheduling.application.eventhandlers
 import java.time.{ LocalDate, LocalDateTime, LocalTime }
 
 import net.domaincentric.scheduling.application.eventsourcing.{ CommandMetadata, EventHandler }
-import net.domaincentric.scheduling.domain.aggregate.doctorday.{ CancelSlotBooking, DayId, SlotBooked, SlotBookingCancelled, SlotId, SlotScheduled }
+import net.domaincentric.scheduling.domain.aggregate.doctorday._
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository
-import net.domaincentric.scheduling.test.{ DummyCommandBus, MongoDatabaseSpec, EventHandlerSpec }
 import net.domaincentric.scheduling.infrastructure.mongodb.MongoDbBookedSlotsRepository
-import net.domaincentric.scheduling.test.DummyCommandBus.SentCommand
+import net.domaincentric.scheduling.test.AssertableCommandBus.SentCommand
+import net.domaincentric.scheduling.test.{ AssertableCommandBusSpec, EventHandlerSpec, MongoDbSpec }
 
 import scala.concurrent.duration._
 
-class OverbookingProcessManagerSpec extends EventHandlerSpec with MongoDatabaseSpec {
+class OverbookingProcessManagerSpec extends EventHandlerSpec with AssertableCommandBusSpec with MongoDbSpec {
   val today: LocalDate           = LocalDate.now(clock)
   val tenAm: LocalTime           = LocalTime.of(10, 0)
   val tenAmToday: LocalDateTime  = LocalDateTime.of(today, tenAm)
   val tenMinutes: FiniteDuration = 10.minutes
 
   val repository: BookedSlotsRepository = new MongoDbBookedSlotsRepository(database)
-  val commandBus                        = new DummyCommandBus()
 
   private val bookingLimitPerPatient = 3
-  override def handler: EventHandler = new OverbookingProcessManager(repository, commandBus, bookingLimitPerPatient)
+  override def handler: EventHandler =
+    new OverbookingProcessManager(repository, commandBus, bookingLimitPerPatient)
 
   "overbooking process manager" should {
     "increment the counter every time a patient books a slot" in {
@@ -69,12 +69,12 @@ class OverbookingProcessManagerSpec extends EventHandlerSpec with MongoDatabaseS
 
       `given`(scheduled1, scheduled2, scheduled3, scheduled4, booked1, booked2, booked3)
       `when`(booked4)
-      `then` {
+      `then` { sentCommands =>
         for {
           count <- repository.countByPatientAndMonth(patientId, today.getMonth)
         } yield {
           count shouldEqual 4
-          commandBus.sentCommands shouldEqual Seq(
+          sentCommands shouldEqual Seq(
             SentCommand(
               dayId.toString,
               CancelSlotBooking(booked4.slotId, "Overbooking"),
