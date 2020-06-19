@@ -23,11 +23,8 @@ class CommandHandler(implicit idGen: UuidGenerator) extends aggregate.CommandHan
     case (_: Scheduled, _: ScheduleDay) => DayAlreadyScheduled
 
     case (state: Scheduled, CancelDaySchedule(reason)) =>
-      DayScheduleCancelled(state.dayId, reason) :: state.slots.value
-        .filter(_.booked)
-        .map { bookedSlot =>
-          SlotBookingCancelled(bookedSlot.slotId, reason)
-        }
+      DayScheduleCancelled(state.dayId, reason) :: state.allBookedSlots
+        .map(slot => SlotBookingCancelled(slot.slotId, reason))
         .toList
 
     case (state: Scheduled, ScheduleSlot(startTime, duration)) if state.doesNotOverlap(startTime, duration) =>

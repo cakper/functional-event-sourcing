@@ -30,6 +30,7 @@ case class Scheduled(dayId: DayId, date: LocalDate, slots: Slots) extends State 
   def hasBookedSlot(slotId: SlotId): Boolean    = slots.value.filter(_.booked).exists(_.slotId == slotId)
   def doesNotOverlap(startTime: LocalTime, duration: Duration): Boolean =
     !slots.value.exists(_.overlapsWith(startTime, duration))
+  def allBookedSlots: Seq[Slot] = slots.value.filter(_.booked)
 }
 
 object Scheduled {
