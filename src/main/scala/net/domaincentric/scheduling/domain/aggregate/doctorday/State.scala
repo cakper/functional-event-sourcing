@@ -1,7 +1,6 @@
 package net.domaincentric.scheduling.domain.aggregate.doctorday
 
 import java.time.{ LocalDate, LocalTime }
-import java.util.UUID
 
 import net.domaincentric.scheduling.domain.aggregate
 import net.domaincentric.scheduling.domain.aggregate.doctorday.Scheduled.{ Slot, Slots }
