@@ -10,11 +10,11 @@ import net.domaincentric.scheduling.domain.service.UuidGenerator
 class CommandHandler(implicit idGen: UuidGenerator) extends aggregate.CommandHandler[Command, Event, Error, State] {
   override def apply(state: State, command: Command): Either[Error, Seq[Event]] = (state, command) match {
     case (Unscheduled, scheduleDay: ScheduleDay) =>
-      val dayScheduledId: UUID = idGen.next()
-      DayScheduled(dayScheduledId, scheduleDay.doctorId, scheduleDay.date) :: scheduleDay.slots.map { slot =>
+      val dayId: DayId = DayId.create
+      DayScheduled(dayId, scheduleDay.doctorId, scheduleDay.date) :: scheduleDay.slots.map { slot =>
         SlotScheduled(
-          dayScheduledId,
-          idGen.next(),
+          SlotId.create,
+          dayId,
           LocalDateTime.of(scheduleDay.date, slot.startTime),
           slot.duration
         )
@@ -22,8 +22,16 @@ class CommandHandler(implicit idGen: UuidGenerator) extends aggregate.CommandHan
 
     case (_: Scheduled, _: ScheduleDay) => DayAlreadyScheduled
 
+    case (state: Scheduled, CancelDaySchedule(reason)) =>
+      DayScheduleCancelled(state.dayId, reason) :: state.slots.value
+        .filter(_.booked)
+        .map { bookedSlot =>
+          SlotBookingCancelled(bookedSlot.slotId, reason)
+        }
+        .toList
+
     case (state: Scheduled, ScheduleSlot(startTime, duration)) if state.doesNotOverlap(startTime, duration) =>
-      SlotScheduled(state.id, idGen.next(), LocalDateTime.of(state.date, startTime), duration)
+      SlotScheduled(SlotId.create, state.dayId, LocalDateTime.of(state.date, startTime), duration)
 
     case (_: Scheduled, _: ScheduleSlot) => SlotOverlapped
 

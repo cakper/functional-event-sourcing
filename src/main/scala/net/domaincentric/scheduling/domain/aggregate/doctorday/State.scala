@@ -17,7 +17,7 @@ case object Unscheduled extends State {
   }
 }
 
-case class Scheduled(id: UUID, date: LocalDate, slots: Slots) extends State {
+case class Scheduled(dayId: DayId, date: LocalDate, slots: Slots) extends State {
 
   def apply(event: Event): State = event match {
     case slot: SlotScheduled             => copy(slots = slots.add(slot))
@@ -26,14 +26,14 @@ case class Scheduled(id: UUID, date: LocalDate, slots: Slots) extends State {
     case _                               => this
   }
 
-  def hasAvailableSlot(slotId: UUID): Boolean = slots.value.filterNot(_.booked).exists(_.eventId == slotId)
-  def hasBookedSlot(slotId: UUID): Boolean    = slots.value.filter(_.booked).exists(_.eventId == slotId)
+  def hasAvailableSlot(slotId: SlotId): Boolean = slots.value.filterNot(_.booked).exists(_.slotId == slotId)
+  def hasBookedSlot(slotId: SlotId): Boolean    = slots.value.filter(_.booked).exists(_.slotId == slotId)
   def doesNotOverlap(startTime: LocalTime, duration: Duration): Boolean =
     !slots.value.exists(_.overlapsWith(startTime, duration))
 }
 
 object Scheduled {
-  case class Slot(eventId: UUID, startTime: LocalTime, duration: Duration, booked: Boolean = false) {
+  case class Slot(slotId: SlotId, startTime: LocalTime, duration: Duration, booked: Boolean = false) {
     def overlapsWith(otherStartTime: LocalTime, otherDuration: Duration): Boolean = {
       val firstStart  = startTime.toSecondOfDay
       val firstEnd    = startTime.plusSeconds(duration.toSeconds).toSecondOfDay
@@ -44,15 +44,15 @@ object Scheduled {
     }
   }
   case class Slots(value: Seq[Slot]) {
-    def markAsAvailable(slotId: UUID): Slots =
+    def markAsAvailable(slotId: SlotId): Slots =
       Slots(value.map { slot =>
-        if (slot.eventId == slotId) slot.copy(booked = false)
+        if (slot.slotId == slotId) slot.copy(booked = false)
         else slot
       })
 
-    def markAsBooked(slotId: UUID): Slots =
+    def markAsBooked(slotId: SlotId): Slots =
       Slots(value.map { slot =>
-        if (slot.eventId == slotId) slot.copy(booked = true)
+        if (slot.slotId == slotId) slot.copy(booked = true)
         else slot
       })
 

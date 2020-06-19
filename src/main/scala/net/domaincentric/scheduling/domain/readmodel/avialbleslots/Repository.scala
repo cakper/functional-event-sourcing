@@ -4,10 +4,11 @@ import java.time.LocalDate
 import java.util.UUID
 
 import monix.eval.Task
+import net.domaincentric.scheduling.domain.aggregate.doctorday.SlotId
 
 trait Repository {
   def addSlot(availableSlot: AvailableSlot): Task[Unit]
-  def hideSlot(slotId: UUID): Task[Unit]
-  def showSlot(slotId: UUID): Task[Unit]
+  def hideSlot(slotId: SlotId): Task[Unit]
+  def showSlot(slotId: SlotId): Task[Unit]
   def getAvailableSlotsOn(date: LocalDate): Task[Seq[AvailableSlot]]
 }

@@ -9,13 +9,16 @@ import io.grpc.netty.shaded.io.netty.handler.ssl.util.InsecureTrustManagerFactor
 import javax.net.ssl.SSLException
 import monix.execution.Scheduler.Implicits.global
 import net.domaincentric.scheduling.application.eventsourcing.{ EventMetadata, Version }
-import net.domaincentric.scheduling.domain.aggregate.doctorday.{ DayScheduled, Scheduled, SlotScheduled }
+import net.domaincentric.scheduling.domain.aggregate.doctorday.{ DayId, DayScheduled, Scheduled, SlotId, SlotScheduled }
+import net.domaincentric.scheduling.domain.service.{ RandomUuidGenerator, UuidGenerator }
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AsyncWordSpec
 
 import scala.concurrent.duration._
 
 class EventStoreSpec extends AsyncWordSpec with Matchers {
+  implicit val uuidGenerator: UuidGenerator = RandomUuidGenerator
+
   val streamsClient: StreamsClient = {
     val creds = new UserCredentials("admin", "changeit")
     new StreamsClient("localhost", 2113, creds, Timeouts.DEFAULT, getClientSslContext)
@@ -34,8 +37,8 @@ class EventStoreSpec extends AsyncWordSpec with Matchers {
       val streamId = "doctorday-" + UUID.randomUUID().toString.split("-").head
 
       val eventsToWrite = Seq(
-        DayScheduled(UUID.randomUUID(), "John Done", LocalDate.now()),
-        SlotScheduled(UUID.randomUUID(), UUID.randomUUID(), LocalDateTime.now(), 10.minutes)
+        DayScheduled(DayId.create, "John Done", LocalDate.now()),
+        SlotScheduled(SlotId.create, DayId.create, LocalDateTime.now(), 10.minutes)
       )
       val commandMetadata = EventMetadata("abc", "123")
 
@@ -51,10 +54,10 @@ class EventStoreSpec extends AsyncWordSpec with Matchers {
     "append to an existing stream" in {
       val streamId = "doctorday-" + UUID.randomUUID().toString.split("-").head
 
-      val firstWrite    = Seq(DayScheduled(UUID.randomUUID(), "John Done", LocalDate.now()))
+      val firstWrite    = Seq(DayScheduled(DayId.create, "John Done", LocalDate.now()))
       val firstMetadata = EventMetadata("abc", "123")
 
-      val secondWrite    = Seq(SlotScheduled(UUID.randomUUID(), UUID.randomUUID(), LocalDateTime.now(), 10.minutes))
+      val secondWrite    = Seq(SlotScheduled(SlotId.create, DayId.create, LocalDateTime.now(), 10.minutes))
       val secondMetadata = EventMetadata("def", "456")
 
       (for {

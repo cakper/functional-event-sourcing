@@ -6,9 +6,10 @@ import java.util.UUID
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
 import net.domaincentric.scheduling.application.eventsourcing.{ EventHandler, EventMetadata }
-import net.domaincentric.scheduling.domain.aggregate.doctorday.{ SlotBooked, SlotBookingCancelled, SlotScheduled }
+import net.domaincentric.scheduling.domain.aggregate.doctorday.{ DayId, SlotBooked, SlotBookingCancelled, SlotId, SlotScheduled }
 import net.domaincentric.scheduling.domain.readmodel.avialbleslots
 import net.domaincentric.scheduling.domain.readmodel.avialbleslots.Repository
+import net.domaincentric.scheduling.domain.service.{ RandomUuidGenerator, UuidGenerator }
 import net.domaincentric.scheduling.infrastructure.mongodb.MongodbAvailableSlotsRepository
 import org.mongodb.scala.{ MongoClient, MongoDatabase }
 import org.scalatest.matchers.should.Matchers
@@ -25,8 +26,8 @@ class AvailableSlotsProjectorSpec extends AsyncWordSpec with Matchers with Befor
     Await.result(database.drop().toFuture(), Duration.Inf)
   }
 
-  def randomId(): UUID      = UUID.randomUUID()
-  implicit val clock: Clock = Clock.fixed(Instant.now(), ZoneOffset.UTC)
+  implicit val uuidGenerator: UuidGenerator = RandomUuidGenerator
+  implicit val clock: Clock                 = Clock.fixed(Instant.now(), ZoneOffset.UTC)
 
   private val today: LocalDate           = LocalDate.now(clock)
   private val tenAm: LocalTime           = LocalTime.of(10, 0)
@@ -56,7 +57,7 @@ class AvailableSlotsProjectorSpec extends AsyncWordSpec with Matchers with Befor
 
   "available slots projector" should {
     "add slot to the list" in {
-      val scheduled = SlotScheduled(randomId(), randomId(), tenAmToday, tenMinutes)
+      val scheduled = SlotScheduled(SlotId.create, DayId.create, tenAmToday, tenMinutes)
       `given`(scheduled)
       `then`(
         repository.getAvailableSlotsOn(today),
@@ -73,14 +74,14 @@ class AvailableSlotsProjectorSpec extends AsyncWordSpec with Matchers with Befor
     }
 
     "hide slot from the list if it was booked" in {
-      val scheduled = SlotScheduled(randomId(), randomId(), tenAmToday, tenMinutes)
+      val scheduled = SlotScheduled(SlotId.create, DayId.create, tenAmToday, tenMinutes)
       val booked    = SlotBooked(scheduled.slotId, "John Doe")
       `given`(scheduled, booked)
       `then`(repository.getAvailableSlotsOn(today), Seq.empty)
     }
 
     "show slot if booking was cancelled" in {
-      val scheduled = SlotScheduled(randomId(), randomId(), tenAmToday, tenMinutes)
+      val scheduled = SlotScheduled(SlotId.create, DayId.create, tenAmToday, tenMinutes)
       val booked    = SlotBooked(scheduled.slotId, "John Doe")
       val cancelled = SlotBookingCancelled(scheduled.slotId, "Can't make it")
       `given`(scheduled, booked, cancelled)

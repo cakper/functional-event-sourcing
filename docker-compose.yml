@@ -2,12 +2,11 @@ version: '3.7'
 
 services:
   eventstore.db:
-    image: docker.pkg.github.com/eventstore/eventstore/eventstore:ci
+    image: docker.pkg.github.com/eventstore/eventstore/eventstore:20.6.0-buster-slim
     environment:
       - EVENTSTORE_DEV=true
       - EVENTSTORE_RUN_PROJECTIONS=all
     ports:
-      - "1113:1113"
       - "2113:2113"
   mong.db:
     image: mongo

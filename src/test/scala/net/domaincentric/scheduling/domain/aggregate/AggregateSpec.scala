@@ -36,7 +36,7 @@ trait AggregateSpec[C, E, Er, S <: State[S, E]] extends AnyWordSpec with Matcher
       case Left(error) =>
         throw new RuntimeException(s"Expected $events but got $error")
       case Right(aggregate) =>
-        events shouldEqual aggregate.changes
+        aggregate.changes shouldEqual events
         aggregate.markAsCommitted.version shouldEqual aggregate.version.incrementBy(aggregate.changes.length)
     }
 

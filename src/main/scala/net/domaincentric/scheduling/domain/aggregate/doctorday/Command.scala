@@ -1,7 +1,6 @@
 package net.domaincentric.scheduling.domain.aggregate.doctorday
 
 import java.time.{ LocalDate, LocalTime }
-import java.util.UUID
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -14,5 +13,6 @@ object ScheduleDay {
 }
 
 case class ScheduleSlot(startTime: LocalTime, duration: FiniteDuration) extends Command
-case class BookSlot(slotId: UUID, patientId: String)                    extends Command
-case class CancelSlotBooking(slotId: UUID, reason: String)              extends Command
+case class BookSlot(slotId: SlotId, patientId: String)                  extends Command
+case class CancelSlotBooking(slotId: SlotId, reason: String)            extends Command
+case class CancelDaySchedule(reason: String)                            extends Command
