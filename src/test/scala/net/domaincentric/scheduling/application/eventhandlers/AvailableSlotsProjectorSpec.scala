@@ -12,7 +12,6 @@ import net.domaincentric.scheduling.infrastructure.mongodb.MongodbAvailableSlots
 import scala.concurrent.duration._
 
 class AvailableSlotsProjectorSpec extends EventHandlerSpec with MongoDbSpec {
-
   val today: LocalDate           = LocalDate.now(clock)
   val tenAm: LocalTime           = LocalTime.of(10, 0)
   val tenAmToday: LocalDateTime  = LocalDateTime.of(today, tenAm)

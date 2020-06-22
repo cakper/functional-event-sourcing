@@ -3,13 +3,14 @@ package net.domaincentric.scheduling.infrastructure.eventstoredb
 import java.time.{ LocalDate, LocalDateTime }
 import java.util.UUID
 
-import com.eventstore.dbclient.{ StreamsClient, Timeouts, UserCredentials }
+import com.eventstore.dbclient.{ StreamNotFoundException, StreamsClient, Timeouts, UserCredentials }
 import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts
 import io.grpc.netty.shaded.io.netty.handler.ssl.util.InsecureTrustManagerFactory
 import javax.net.ssl.SSLException
+import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
-import net.domaincentric.scheduling.application.eventsourcing.{ EventMetadata, Version }
-import net.domaincentric.scheduling.domain.aggregate.doctorday.{ DayId, DayScheduled, Scheduled, SlotId, SlotScheduled }
+import net.domaincentric.scheduling.application.eventsourcing.{ CausationId, CorrelationId, EventMetadata, Version }
+import net.domaincentric.scheduling.domain.aggregate.doctorday.{ DayId, DayScheduled, SlotId, SlotScheduled }
 import net.domaincentric.scheduling.domain.service.{ RandomUuidGenerator, UuidGenerator }
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AsyncWordSpec
@@ -40,14 +41,14 @@ class EventStoreSpec extends AsyncWordSpec with Matchers {
         DayScheduled(DayId.create, "John Done", LocalDate.now()),
         SlotScheduled(SlotId.create, DayId.create, LocalDateTime.now(), 10.minutes)
       )
-      val commandMetadata = EventMetadata("abc", "123")
+      val commandMetadata = EventMetadata(CorrelationId.create, CausationId.create)
 
       (for {
         version    <- client.createNewStream(streamId, eventsToWrite, commandMetadata)
         readEvents <- client.readFromStream(streamId).toListL
       } yield {
         version shouldEqual new Version(1L)
-        readEvents.map(_.event) shouldEqual eventsToWrite
+        readEvents.map(_.data) shouldEqual eventsToWrite
       }).runToFuture
     }
 
@@ -55,10 +56,10 @@ class EventStoreSpec extends AsyncWordSpec with Matchers {
       val streamId = "doctorday-" + UUID.randomUUID().toString.split("-").head
 
       val firstWrite    = Seq(DayScheduled(DayId.create, "John Done", LocalDate.now()))
-      val firstMetadata = EventMetadata("abc", "123")
+      val firstMetadata = EventMetadata(CorrelationId.create, CausationId.create)
 
       val secondWrite    = Seq(SlotScheduled(SlotId.create, DayId.create, LocalDateTime.now(), 10.minutes))
-      val secondMetadata = EventMetadata("def", "456")
+      val secondMetadata = EventMetadata(CorrelationId.create, CausationId.create)
 
       (for {
         firstVersion  <- client.createNewStream(streamId, firstWrite, firstMetadata)
@@ -67,7 +68,53 @@ class EventStoreSpec extends AsyncWordSpec with Matchers {
       } yield {
         firstVersion shouldEqual new Version(0L)
         secondVersion shouldEqual new Version(1L)
-        readEvents.map(_.event) shouldEqual firstWrite.appendedAll(secondWrite)
+        readEvents.map(_.data) shouldEqual firstWrite.appendedAll(secondWrite)
+      }).runToFuture
+    }
+
+    "truncate" in {
+      val streamId = "doctorday-" + RandomUuidGenerator.next().toString
+
+      val eventsToWrite = Seq(
+        DayScheduled(DayId.create, "John Done", LocalDate.now()),
+        SlotScheduled(SlotId.create, DayId.create, LocalDateTime.now(), 10.minutes),
+        SlotScheduled(SlotId.create, DayId.create, LocalDateTime.now(), 10.minutes),
+        SlotScheduled(SlotId.create, DayId.create, LocalDateTime.now(), 10.minutes),
+        SlotScheduled(SlotId.create, DayId.create, LocalDateTime.now(), 10.minutes),
+        SlotScheduled(SlotId.create, DayId.create, LocalDateTime.now(), 10.minutes)
+      )
+      val commandMetadata = EventMetadata(CorrelationId.create, CausationId.create)
+
+      (for {
+        _      <- client.createNewStream(streamId, eventsToWrite, commandMetadata)
+        _      <- client.truncateStreamBefore(streamId, 3L)
+        events <- client.readFromStream(streamId).toListL
+      } yield {
+        events.map(_.data) shouldEqual eventsToWrite.drop(3)
+      }).runToFuture
+    }
+
+    "soft delete" in {
+      val streamId = "doctorday-" + RandomUuidGenerator.next().toString
+
+      val eventsToWrite = Seq(
+        DayScheduled(DayId.create, "John Done", LocalDate.now()),
+        SlotScheduled(SlotId.create, DayId.create, LocalDateTime.now(), 10.minutes),
+        SlotScheduled(SlotId.create, DayId.create, LocalDateTime.now(), 10.minutes),
+        SlotScheduled(SlotId.create, DayId.create, LocalDateTime.now(), 10.minutes),
+        SlotScheduled(SlotId.create, DayId.create, LocalDateTime.now(), 10.minutes),
+        SlotScheduled(SlotId.create, DayId.create, LocalDateTime.now(), 10.minutes)
+      )
+      val commandMetadata = EventMetadata(CorrelationId.create, CausationId.create)
+
+      (for {
+        _ <- client.createNewStream(streamId, eventsToWrite, commandMetadata)
+        _ <- client.deleteStream(streamId, 5L)
+        error <- client.readFromStream(streamId).toListL.onErrorHandleWith {
+          case error: StreamNotFoundException => Task.now(error)
+        }
+      } yield {
+        error shouldBe a[StreamNotFoundException]
       }).runToFuture
     }
   }

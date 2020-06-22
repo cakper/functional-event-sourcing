@@ -12,6 +12,7 @@ trait BookedSlotsRepository {
   def markSlotAsAvailable(slotId: SlotId): Task[Unit]
   def countByPatientAndMonth(patient: String, month: Month): Task[Int]
   def findSlot(slotId: SlotId): Task[Slot]
+  def findAllSlotIdsFor(patientId: String): Task[Seq[SlotId]]
 }
 
 object BookedSlotsRepository {

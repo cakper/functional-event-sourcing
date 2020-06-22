@@ -8,9 +8,13 @@ import javax.net.ssl.SSLException
 import monix.eval.{ Task, TaskApp }
 import monix.reactive.Consumer
 import net.domaincentric.scheduling.application.eventhandlers.AvailableSlotsProjector
-import net.domaincentric.scheduling.infrastructure.eventstoredb.{ EventSerde, EventStore }
+import net.domaincentric.scheduling.application.http.Http
+import net.domaincentric.scheduling.infrastructure.eventstoredb.{ EventSerde, EventStore, Serde }
 import net.domaincentric.scheduling.infrastructure.mongodb.MongodbAvailableSlotsRepository
-import org.mongodb.scala.{ MongoClient, MongoDatabase }
+import org.http4s.implicits._
+import org.http4s.server.Router
+import org.http4s.server.blaze.BlazeServerBuilder
+import org.mongodb.scala.MongoClient
 
 object Application extends TaskApp {
   override def run(args: List[String]): Task[ExitCode] = {
@@ -31,17 +35,25 @@ object Application extends TaskApp {
     val availableSlotsRepository = new MongodbAvailableSlotsRepository(mongoDbClient.getDatabase("projections"))
     val availableSlotsProjector  = new AvailableSlotsProjector(availableSlotsRepository)
 
-    (for {
-      _ <- eventStore
-        .subscribeToAll()
-        .consumeWith(Consumer.foreachTask { envelope =>
-          availableSlotsProjector
-            .handle(envelope.event, envelope.metadata, envelope.eventId, envelope.version, envelope.occurredAt)
-        })
+    val httpServer: Task[Nothing] =
+      BlazeServerBuilder[Task](scheduler)
+        .bindHttp(8080, "localhost")
+        .withHttpApp(Router("/api" -> Http.service).orNotFound)
+        .resource
+        .use(_ => Task.never)
 
-    } yield ExitCode.Success)
+    val projectionConsumer: Task[Unit] = eventStore
+      .subscribeToAll()
+      .consumeWith(Consumer.foreachTask { envelope =>
+        availableSlotsProjector
+          .handle(envelope.data, envelope.metadata, envelope.eventId, envelope.version, envelope.occurredAt)
+      })
+
+    Task
+      .parZip2(httpServer, projectionConsumer)
       .guarantee {
         Task.parZip2(Task.eval(streamsClient.shutdown()), Task.eval(mongoDbClient.close())).map(_ => ())
       }
+      .map(_ => ExitCode.Success)
   }
 }

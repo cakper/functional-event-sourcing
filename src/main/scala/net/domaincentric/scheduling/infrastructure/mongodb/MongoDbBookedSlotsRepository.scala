@@ -68,9 +68,7 @@ class MongoDbBookedSlotsRepository(database: MongoDatabase) extends BookedSlotsR
     Task
       .deferFuture {
         patientSlots
-          .deleteOne(
-            and(equal("slotId", slotId))
-          )
+          .deleteOne(equal("slotId", slotId))
           .toFuture()
       }
       .map(_ => ())
@@ -86,4 +84,13 @@ class MongoDbBookedSlotsRepository(database: MongoDatabase) extends BookedSlotsR
         case Some(slot) => Task.now(Slot(slot.slotId, slot.dayId, slot.month))
       }
   }
+
+  override def findAllSlotIdsFor(patientId: String): Task[Seq[SlotId]] =
+    Task
+      .deferFuture {
+        patientSlots
+          .find(equal("patientId", patientId))
+          .toFuture()
+      }
+      .map(_.map(_.slotId))
 }

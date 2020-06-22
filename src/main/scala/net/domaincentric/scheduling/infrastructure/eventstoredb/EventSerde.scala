@@ -9,31 +9,16 @@ import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
 import net.domaincentric.scheduling.application.eventsourcing
-import net.domaincentric.scheduling.application.eventsourcing.{ EventEnvelope, EventMetadata }
-import net.domaincentric.scheduling.domain.aggregate.doctorday.{ DayScheduled, SlotBooked, SlotBookingCancelled, SlotScheduled }
+import net.domaincentric.scheduling.application.eventsourcing.{ Envelope, EventMetadata }
+import net.domaincentric.scheduling.domain.aggregate.doctorday._
 
-import scala.concurrent.duration.FiniteDuration
+import net.domaincentric.scheduling.infrastructure.circe.Implicits._
 import scala.util.Try
 
-class EventSerde {
-  val prefix = s"doctorday"
+class EventSerde extends Serde[EventMetadata] {
+  private val prefix = "doctorday"
 
-  implicit final val finiteDurationDecoder: Decoder[FiniteDuration] =
-    (c: HCursor) =>
-      for {
-        length     <- c.downField("length").as[Long]
-        unitString <- c.downField("unit").as[String]
-        unit <- try {
-          Right(TimeUnit.valueOf(unitString))
-        } catch {
-          case _: IllegalArgumentException => Left(DecodingFailure("FiniteDuration", c.history))
-        }
-      } yield FiniteDuration(length, unit)
-
-  implicit final val finiteDurationEncoder: Encoder[FiniteDuration] = (a: FiniteDuration) =>
-    Json.fromJsonObject(JsonObject("length" -> Json.fromLong(a.length), "unit" -> Json.fromString(a.unit.name)))
-
-  def deserialize(resolvedEvent: ResolvedEvent): Try[EventEnvelope] = Try {
+  def deserialize(resolvedEvent: ResolvedEvent): Try[Envelope[EventMetadata]] = Try {
     val rawEvent = resolvedEvent.getEvent
     val event = (rawEvent.getEventType match {
       case s"$prefix-day-scheduled"          => decode[DayScheduled] _
@@ -43,7 +28,7 @@ class EventSerde {
     })(new String(rawEvent.getEventData)).toOption.get
 
     val metadata = decode[EventMetadata](new String(rawEvent.getUserMetadata)).toOption.get
-    eventsourcing.EventEnvelope(
+    eventsourcing.Envelope(
       event,
       metadata,
       rawEvent.getEventId,
@@ -58,6 +43,8 @@ class EventSerde {
       case e: SlotScheduled        => toProposedEvent(s"$prefix-slot-scheduled", e.asJson, metadata)
       case e: SlotBooked           => toProposedEvent(s"$prefix-slot-booked", e.asJson, metadata)
       case e: SlotBookingCancelled => toProposedEvent(s"$prefix-slot-booking-cancelled", e.asJson, metadata)
+      case c: CancelSlotBooking =>
+        toProposedEvent(s"$prefix-command-cancel-slot-booking", c.asJson, metadata)
     }
   }
 

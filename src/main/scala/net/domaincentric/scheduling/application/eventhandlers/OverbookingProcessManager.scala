@@ -4,7 +4,7 @@ import java.time.Instant
 import java.util.UUID
 
 import monix.eval.Task
-import net.domaincentric.scheduling.application.eventsourcing.{ CommandBus, CommandMetadata, EventHandler, EventMetadata, Version }
+import net.domaincentric.scheduling.application.eventsourcing.{ AggregateId, CausationId, CommandBus, CommandMetadata, CorrelationId, EventHandler, EventMetadata, Version }
 import net.domaincentric.scheduling.domain.aggregate.doctorday.{ CancelSlotBooking, SlotBooked, SlotBookingCancelled, SlotScheduled }
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository.Slot
@@ -22,18 +22,21 @@ class OverbookingProcessManager(repository: BookedSlotsRepository, commandBus: C
   ): Task[Unit] = event match {
     case SlotScheduled(slotId, dayId, startTime, _) => repository.addSlot(Slot(slotId, dayId, startTime.getMonth))
     case SlotBooked(slotId, patientId) =>
-      for {
-        _     <- repository.markSlotAsBooked(slotId, patientId)
-        slot  <- repository.findSlot(slotId)
-        count <- repository.countByPatientAndMonth(patientId, slot.month)
-        _ <- if (count <= bookingLimitPerPatient) Task.unit
-        else
-          commandBus.send(
-            slot.dayId.toString,
-            CancelSlotBooking(slotId, "Overbooking"),
-            CommandMetadata(metadata.correlationId, uuidGenerator.next().toString)
-          )
-      } yield ()
+      repository.findAllSlotIdsFor(patientId).flatMap {
+        case slotIds if slotIds.contains(slotId) => Task.unit
+        case _ =>
+          for {
+            _     <- repository.markSlotAsBooked(slotId, patientId)
+            slot  <- repository.findSlot(slotId)
+            count <- repository.countByPatientAndMonth(patientId, slot.month)
+            _ <- if (count <= bookingLimitPerPatient) Task.unit
+            else
+              commandBus.send(
+                CancelSlotBooking(slotId, "Overbooking"),
+                CommandMetadata(metadata.correlationId, CausationId.create, AggregateId(slot.dayId.toString))
+              )
+          } yield ()
+      }
 
     case SlotBookingCancelled(slotId, _) => repository.markSlotAsAvailable(slotId)
     case _                               => Task.raiseError(new RuntimeException("Handler not implemented"))

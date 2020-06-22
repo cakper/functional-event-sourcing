@@ -2,29 +2,21 @@ package net.domaincentric.scheduling.application.eventhandlers
 
 import java.time.{ LocalDate, LocalDateTime, LocalTime }
 
-import net.domaincentric.scheduling.application.eventsourcing.{ CommandMetadata, EventHandler }
+import net.domaincentric.scheduling.application.eventsourcing.CommandBus.CommandEnvelope
+import net.domaincentric.scheduling.application.eventsourcing.{ AggregateId, CausationId, CommandMetadata, EventHandler }
 import net.domaincentric.scheduling.domain.aggregate.doctorday._
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository
 import net.domaincentric.scheduling.infrastructure.mongodb.MongoDbBookedSlotsRepository
-import net.domaincentric.scheduling.test.AssertableCommandBus.SentCommand
-import net.domaincentric.scheduling.test.{ AssertableCommandBusSpec, EventHandlerSpec, MongoDbSpec }
+import net.domaincentric.scheduling.test.{ EventHandlerSpec, MongoDbSpec }
 
 import scala.concurrent.duration._
 
-class OverbookingProcessManagerSpec extends EventHandlerSpec with AssertableCommandBusSpec with MongoDbSpec {
-  val today: LocalDate           = LocalDate.now(clock)
-  val tenAm: LocalTime           = LocalTime.of(10, 0)
-  val tenAmToday: LocalDateTime  = LocalDateTime.of(today, tenAm)
-  val tenMinutes: FiniteDuration = 10.minutes
-
-  val repository: BookedSlotsRepository = new MongoDbBookedSlotsRepository(database)
-
-  private val bookingLimitPerPatient = 3
-  override def handler: EventHandler =
-    new OverbookingProcessManager(repository, commandBus, bookingLimitPerPatient)
+class OverbookingProcessManagerSpec extends EventHandlerSpec with MongoDbSpec {
+  override def enableAtLeastOnceMonkey = false
+  override def enableWonkyIoMonkey     = false
 
   "overbooking process manager" should {
-    "increment the counter every time a patient books a slot" in {
+    "increment the visit counter every time a patient books a slot" in {
       val patientId = "John Doe"
 
       val scheduled1 = SlotScheduled(SlotId.create, DayId.create, tenAmToday, tenMinutes)
@@ -75,14 +67,24 @@ class OverbookingProcessManagerSpec extends EventHandlerSpec with AssertableComm
         } yield {
           count shouldEqual 4
           sentCommands shouldEqual Seq(
-            SentCommand(
-              dayId.toString,
+            CommandEnvelope(
               CancelSlotBooking(booked4.slotId, "Overbooking"),
-              CommandMetadata(metadata.correlationId, uuidGenerator.next().toString)
+              CommandMetadata(metadata.correlationId, metadata.causationId, AggregateId(dayId.toString))
             )
           )
         }
       }
     }
   }
+
+  val today: LocalDate           = LocalDate.now(clock)
+  val tenAm: LocalTime           = LocalTime.of(10, 0)
+  val tenAmToday: LocalDateTime  = LocalDateTime.of(today, tenAm)
+  val tenMinutes: FiniteDuration = 10.minutes
+
+  val repository: BookedSlotsRepository = new MongoDbBookedSlotsRepository(database)
+
+  private val bookingLimitPerPatient = 3
+  override def handler: EventHandler =
+    new OverbookingProcessManager(repository, commandBus, bookingLimitPerPatient)
 }
