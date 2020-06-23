@@ -10,7 +10,7 @@ import monix.reactive.Consumer
 import net.domaincentric.scheduling.application.eventhandlers.AvailableSlotsProjector
 import net.domaincentric.scheduling.application.http.Http
 import net.domaincentric.scheduling.domain.service.{ RandomUuidGenerator, UuidGenerator }
-import net.domaincentric.scheduling.infrastructure.eventstoredb.{ AggregateStore, EventSerde, EventStore }
+import net.domaincentric.scheduling.infrastructure.eventstoredb.{ AggregateStore, EventSerde, EventStore, SnapshotStore, StateSerde }
 import net.domaincentric.scheduling.infrastructure.mongodb.MongodbAvailableSlotsRepository
 import org.http4s.implicits._
 import org.http4s.server.Router
@@ -30,12 +30,11 @@ object Application extends TaskApp {
       new StreamsClient("localhost", 2113, creds, Timeouts.DEFAULT, getClientSslContext)
     }
 
-    val eventStore = new EventStore(streamsClient, new EventSerde)
-
     val mongoDbClient                         = MongoClient("mongodb://localhost")
     val availableSlotsRepository              = new MongodbAvailableSlotsRepository(mongoDbClient.getDatabase("projections"))
     val availableSlotsProjector               = new AvailableSlotsProjector(availableSlotsRepository)
-    val aggregateStore                        = new AggregateStore(eventStore)
+    val snapshotStore                         = new SnapshotStore(new EventStore(streamsClient, new StateSerde))
+    val aggregateStore                        = new AggregateStore(new EventStore(streamsClient, new EventSerde), snapshotStore)
     implicit val uuidGenerator: UuidGenerator = RandomUuidGenerator
 
     val httpServer: Task[Nothing] =
@@ -45,7 +44,7 @@ object Application extends TaskApp {
         .resource
         .use(_ => Task.never)
 
-    val projectionConsumer: Task[Unit] = eventStore
+    val projectionConsumer: Task[Unit] = new EventStore(streamsClient, new EventSerde)
       .subscribeToAll()
       .consumeWith(Consumer.foreachTask { envelope =>
         availableSlotsProjector

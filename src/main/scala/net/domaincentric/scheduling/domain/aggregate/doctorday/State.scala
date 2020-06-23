@@ -5,7 +5,7 @@ import java.time.{ LocalDate, LocalTime }
 import net.domaincentric.scheduling.domain.aggregate
 import net.domaincentric.scheduling.domain.aggregate.doctorday.Scheduled.{ Slot, Slots }
 
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{ Duration, FiniteDuration }
 
 sealed trait State extends aggregate.State[State, Event]
 
@@ -33,7 +33,7 @@ case class Scheduled(dayId: DayId, date: LocalDate, slots: Slots) extends State 
 }
 
 object Scheduled {
-  case class Slot(slotId: SlotId, startTime: LocalTime, duration: Duration, booked: Boolean = false) {
+  case class Slot(slotId: SlotId, startTime: LocalTime, duration: FiniteDuration, booked: Boolean = false) {
     def overlapsWith(otherStartTime: LocalTime, otherDuration: Duration): Boolean = {
       val firstStart  = startTime.toSecondOfDay
       val firstEnd    = startTime.plusSeconds(duration.toSeconds).toSecondOfDay

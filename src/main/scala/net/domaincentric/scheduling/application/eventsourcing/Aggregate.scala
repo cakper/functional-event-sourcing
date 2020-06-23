@@ -20,9 +20,18 @@ case class Aggregate[C, E, Er, S <: State[S, E]](
       version = version.incrementBy(events.length)
     )
 
+  def reconstitute(state: S, version: Version): Aggregate[C, E, Er, S] = copy(state = state, version = version)
+
   def markAsCommitted: Aggregate[C, E, Er, S] =
     copy(
       version = version.incrementBy(changes.length),
       changes = Seq.empty
     )
+}
+
+object Aggregate {
+  def apply[C, E, Er, S <: State[S, E]](
+      id: AggregateId,
+      handler: CommandHandler[C, E, Er, S]
+  ): Aggregate[C, E, Er, S] = Aggregate(id, handler.initialState, handler)
 }

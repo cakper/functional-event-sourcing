@@ -41,7 +41,7 @@ class EventStore[M](val client: StreamsClient, eventSerde: Serde[M]) extends eve
 //  private val subscriptionFilter: SubscriptionFilter =
 //    new SubscriptionFilterBuilder().withEventTypePrefix(eventSerde.prefix).build()
 
-  override def readFromStream(streamId: String): Observable[Envelope[M]] = {
+  override def readFromStream(streamId: String, fromVersion: Version = Version(0)): Observable[Envelope[M]] = {
     Observable
       .fromAsyncStateAction[StreamRevision, Seq[Envelope[M]]] {
         case StreamRevision.END => Task.now((Seq.empty, StreamRevision.END))
@@ -56,7 +56,7 @@ class EventStore[M](val client: StreamsClient, eventSerde: Serde[M]) extends eve
             if (events.size < pageSize) (events, StreamRevision.END)
             else (events, new StreamRevision(revision.getValueUnsigned + events.size))
           }
-      }(StreamRevision.START)
+      }(new StreamRevision(fromVersion.value))
       .takeWhile(_.nonEmpty)
       .flatMap(Observable.fromIterable)
   }

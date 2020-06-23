@@ -1,8 +1,9 @@
 package net.domaincentric.scheduling.application.eventsourcing
 
-class Version(val value: Long) extends AnyVal {
+case class Version(value: Long) {
   def isNew: Boolean                       = value == -1L
   def incrementBy(increment: Int): Version = new Version(value + increment.toLong)
+  def nextReadVersion: Version             = Version(value + 1L)
 }
 
 object Version {
