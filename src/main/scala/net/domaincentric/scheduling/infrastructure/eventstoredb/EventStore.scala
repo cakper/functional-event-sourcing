@@ -8,7 +8,7 @@ import monix.eval.Task
 import monix.reactive.Observable
 import net.domaincentric.scheduling.application.eventsourcing
 import net.domaincentric.scheduling.application.eventsourcing.Version._
-import net.domaincentric.scheduling.application.eventsourcing.{ Envelope, EventMetadata, OptimisticConcurrencyException, Version }
+import net.domaincentric.scheduling.application.eventsourcing.{ Envelope, OptimisticConcurrencyException, Version }
 
 import scala.compat.java8.FutureConverters._
 import scala.jdk.CollectionConverters._
@@ -50,8 +50,8 @@ class EventStore[M](val client: StreamsClient, eventSerde: Serde[M]) extends eve
             result <- Task.deferFuture(
               client.readStream(Direction.Forward, streamId, revision, pageSize, false).toScala
             )
-//            events <- Task.fromTry(result.getEvents.asScala.toList.traverse(eventSerde.deserialize)) // TODO: Handle deserialization errors in a better way
-            events <- Task.now(result.getEvents.asScala.toList.flatMap(eventSerde.deserialize(_).toOption))
+//            events <- Task.fromTry(result.getEvents.asScala.toList.traverse(eventSerde.deserialize))
+            events <- Task.now(result.getEvents.asScala.toList.map(eventSerde.deserialize(_).get)) // TODO: Handle deserialization errors in a better way
           } yield {
             if (events.size < pageSize) (events, StreamRevision.END)
             else (events, new StreamRevision(revision.getValueUnsigned + events.size))
@@ -60,6 +60,13 @@ class EventStore[M](val client: StreamsClient, eventSerde: Serde[M]) extends eve
       .takeWhile(_.nonEmpty)
       .flatMap(Observable.fromIterable)
   }
+
+  override def readLastFromStream(streamId: String): Task[Option[Envelope[M]]] =
+    Task
+      .deferFuture(
+        client.readStream(Direction.Backward, streamId, StreamRevision.END, 1, false).toScala
+      )
+      .map(_.getEvents.asScala.toList.headOption.map(eventSerde.deserialize(_).get))
 
   override def createNewStream(
       streamId: String,
@@ -92,11 +99,6 @@ class EventStore[M](val client: StreamsClient, eventSerde: Serde[M]) extends eve
       }
     }
 //    TODO: Handle deserialization errors
-//    SubscriptionObservable(
-//      client.subscribeToAll(fromPosition, false, _)
-//    ).mapEval { resolvedEvent =>
-//      Task.fromTry(eventSerde.deserialize(resolvedEvent))
-//    }
   }
 
   override def appendToStream(

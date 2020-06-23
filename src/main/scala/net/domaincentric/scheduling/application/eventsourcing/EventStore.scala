@@ -6,6 +6,7 @@ import monix.reactive.Observable
 
 trait EventStore[M] {
   def readFromStream(streamId: String, fromVersion: Version = Version(0L)): Observable[Envelope[M]]
+  def readLastFromStream(streamId: String): Task[Option[Envelope[M]]]
 
   def createNewStream(streamId: String, events: Seq[Any], metadata: M): Task[Version]
   def appendToStream(

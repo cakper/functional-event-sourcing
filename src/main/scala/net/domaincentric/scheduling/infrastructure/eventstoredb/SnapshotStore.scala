@@ -9,15 +9,13 @@ import net.domaincentric.scheduling.application.eventsourcing.{ AggregateId, Sna
 class SnapshotStore(eventStore: EventStore[SnapshotMetadata]) extends eventsourcing.SnapshotStore {
   override def read(aggregateId: AggregateId): Task[Option[SnapshotStore.SnapshotEnvelope]] =
     eventStore
-      .readFromStream(s"snapshot-$aggregateId")
-      .toListL
-      .map(_.lastOption.map { result =>
+      .readLastFromStream(s"snapshot-$aggregateId")
+      .map(_.map { result =>
         SnapshotEnvelope(result.data, result.metadata)
       })
       .onErrorHandleWith {
         case _: StreamNotFoundException => Task.now(None)
       }
-  // TODO: Optimise read
 
   override def write(aggregateId: AggregateId, snapshot: Any, snapshotMetadata: SnapshotMetadata): Task[Version] =
     eventStore.appendToStream(
