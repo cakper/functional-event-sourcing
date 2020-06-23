@@ -8,35 +8,13 @@ import monix.eval.Task
 import monix.reactive.Observable
 import net.domaincentric.scheduling.application.eventsourcing
 import net.domaincentric.scheduling.application.eventsourcing.Version._
-import net.domaincentric.scheduling.application.eventsourcing.{ Envelope, OptimisticConcurrencyException, Version }
+import net.domaincentric.scheduling.application.eventsourcing.{ Checkpoint, Envelope, OptimisticConcurrencyException, Version }
 
 import scala.compat.java8.FutureConverters._
 import scala.jdk.CollectionConverters._
 import scala.util.{ Failure, Success }
 
 class EventStore[M](val client: StreamsClient, eventSerde: Serde[M]) extends eventsourcing.EventStore[M] {
-  def truncateStreamBefore(streamId: String, version: Version): Task[Unit] = {
-    Task
-      .deferFuture {
-        client
-          .appendToStream(
-            "$$" + streamId,
-            SpecialStreamRevision.ANY,
-            Seq(
-              new ProposedEvent(
-                UUID.randomUUID(),
-                "$metadata",
-                "application/json",
-                ("{\"$tb\":" + version.value + "}").getBytes,
-                "{}".getBytes
-              )
-            ).asJava
-          )
-          .toScala
-      }
-      .map(_ => ())
-  }
-
   private val pageSize = 4096
 //  private val subscriptionFilter: SubscriptionFilter =
 //    new SubscriptionFilterBuilder().withEventTypePrefix(eventSerde.prefix).build()
@@ -89,18 +67,6 @@ class EventStore[M](val client: StreamsClient, eventSerde: Serde[M]) extends eve
         }
     } yield result.getNextExpectedRevision.getValueUnsigned
 
-  override def subscribeToAll(fromPosition: Position = Position.START): Observable[Envelope[M]] = {
-    SubscriptionObservable(
-      client.subscribeToAll(fromPosition, false, _)
-    ).flatMap { resolvedEvent =>
-      eventSerde.deserialize(resolvedEvent) match {
-        case Success(value) => Observable.now(value)
-        case Failure(_)     => Observable.empty
-      }
-    }
-//    TODO: Handle deserialization errors
-  }
-
   override def appendToStream(
       streamId: String,
       events: Seq[Any],
@@ -137,4 +103,56 @@ class EventStore[M](val client: StreamsClient, eventSerde: Serde[M]) extends eve
           .toScala
       }
       .map(_ => ())
+
+  override def truncateStream(streamId: String, beforeVersion: Version): Task[Unit] = {
+    Task
+      .deferFuture {
+        client
+          .appendToStream(
+            "$$" + streamId,
+            SpecialStreamRevision.ANY,
+            Seq(
+              new ProposedEvent(
+                UUID.randomUUID(),
+                "$metadata",
+                "application/json",
+                ("{\"$tb\":" + beforeVersion.value + "}").getBytes,
+                "{}".getBytes
+              )
+            ).asJava
+          )
+          .toScala
+      }
+      .map(_ => ())
+  }
+
+  override def subscribeToAll(fromCheckpoint: Option[Checkpoint] = None): Observable[Envelope[M]] = {
+    SubscriptionObservable(
+      client.subscribeToAll(fromCheckpoint.map(x => new Position(x.value, x.value)).getOrElse(Position.START), false, _)
+    ).flatMap { resolvedEvent =>
+      eventSerde.deserialize(resolvedEvent) match {
+        case Success(value) => Observable.now(value)
+        case Failure(_)     => Observable.empty
+      }
+    }
+    //    TODO: Handle deserialization errors
+  }
+
+  override def subscribeToCategory(category: String, fromCheckpoint: Option[Checkpoint]): Observable[Envelope[M]] = {
+    SubscriptionObservable(
+      client
+        .subscribeToStream(
+          "$ce-" + category,
+          fromCheckpoint.map(c => new StreamRevision(c.value)).getOrElse(StreamRevision.START),
+          true,
+          _
+        )
+    ).flatMap { resolvedEvent =>
+      eventSerde.deserialize(resolvedEvent) match {
+        case Success(value) => Observable.now(value)
+        case Failure(_)     => Observable.empty
+      }
+    }
+    //    TODO: Handle deserialization errors
+  }
 }

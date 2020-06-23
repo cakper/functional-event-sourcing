@@ -90,7 +90,7 @@ class EventStoreSpec extends AsyncWordSpec with Matchers {
 
       (for {
         _      <- client.createNewStream(streamId, eventsToWrite, commandMetadata)
-        _      <- client.truncateStreamBefore(streamId, 3L)
+        _      <- client.truncateStream(streamId, 3L)
         events <- client.readFromStream(streamId).toListL
       } yield {
         events.map(_.data) shouldEqual eventsToWrite.drop(3)
