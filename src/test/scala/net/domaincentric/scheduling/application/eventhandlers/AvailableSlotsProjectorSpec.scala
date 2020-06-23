@@ -22,7 +22,7 @@ class AvailableSlotsProjectorSpec extends EventHandlerSpec with MongoDbSpec {
 
   "available slots projector" should {
     "add slot to the list" in {
-      val scheduled = SlotScheduled(SlotId.create, DayId.create, tenAmToday, tenMinutes)
+      val scheduled = SlotScheduled(SlotId.create, DayId(DoctorId("123"), today), tenAmToday, tenMinutes)
       `given`(scheduled)
       `then`(
         repository.getAvailableSlotsOn(today).map { result =>
@@ -40,14 +40,14 @@ class AvailableSlotsProjectorSpec extends EventHandlerSpec with MongoDbSpec {
     }
 
     "hide slot from the list if it was booked" in {
-      val scheduled = SlotScheduled(SlotId.create, DayId.create, tenAmToday, tenMinutes)
+      val scheduled = SlotScheduled(SlotId.create, DayId(DoctorId("123"), today), tenAmToday, tenMinutes)
       val booked    = SlotBooked(scheduled.slotId, "John Doe")
       `given`(scheduled, booked)
       `then`(repository.getAvailableSlotsOn(today).map(_ shouldEqual Seq.empty))
     }
 
     "show slot if booking was cancelled" in {
-      val scheduled = SlotScheduled(SlotId.create, DayId.create, tenAmToday, tenMinutes)
+      val scheduled = SlotScheduled(SlotId.create, DayId(DoctorId("123"), today), tenAmToday, tenMinutes)
       val booked    = SlotBooked(scheduled.slotId, "John Doe")
       val cancelled = SlotBookingCancelled(scheduled.slotId, "Can't make it")
       `given`(scheduled, booked, cancelled)

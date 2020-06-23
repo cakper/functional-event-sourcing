@@ -9,7 +9,8 @@ import monix.eval.{ Task, TaskApp }
 import monix.reactive.Consumer
 import net.domaincentric.scheduling.application.eventhandlers.AvailableSlotsProjector
 import net.domaincentric.scheduling.application.http.Http
-import net.domaincentric.scheduling.infrastructure.eventstoredb.{ EventSerde, EventStore, Serde }
+import net.domaincentric.scheduling.domain.service.{ RandomUuidGenerator, UuidGenerator }
+import net.domaincentric.scheduling.infrastructure.eventstoredb.{ AggregateStore, EventSerde, EventStore }
 import net.domaincentric.scheduling.infrastructure.mongodb.MongodbAvailableSlotsRepository
 import org.http4s.implicits._
 import org.http4s.server.Router
@@ -31,14 +32,16 @@ object Application extends TaskApp {
 
     val eventStore = new EventStore(streamsClient, new EventSerde)
 
-    val mongoDbClient            = MongoClient("mongodb://localhost")
-    val availableSlotsRepository = new MongodbAvailableSlotsRepository(mongoDbClient.getDatabase("projections"))
-    val availableSlotsProjector  = new AvailableSlotsProjector(availableSlotsRepository)
+    val mongoDbClient                         = MongoClient("mongodb://localhost")
+    val availableSlotsRepository              = new MongodbAvailableSlotsRepository(mongoDbClient.getDatabase("projections"))
+    val availableSlotsProjector               = new AvailableSlotsProjector(availableSlotsRepository)
+    val aggregateStore                        = new AggregateStore(eventStore)
+    implicit val uuidGenerator: UuidGenerator = RandomUuidGenerator
 
     val httpServer: Task[Nothing] =
       BlazeServerBuilder[Task](scheduler)
         .bindHttp(8080, "localhost")
-        .withHttpApp(Router("/api" -> Http.service).orNotFound)
+        .withHttpApp(Router("/api" -> Http.service(availableSlotsRepository, aggregateStore)).orNotFound)
         .resource
         .use(_ => Task.never)
 

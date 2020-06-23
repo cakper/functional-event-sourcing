@@ -8,10 +8,11 @@ import monix.eval.Task
 import monix.reactive.Observable
 import net.domaincentric.scheduling.application.eventsourcing
 import net.domaincentric.scheduling.application.eventsourcing.Version._
-import net.domaincentric.scheduling.application.eventsourcing.{ Envelope, EventMetadata, Version }
+import net.domaincentric.scheduling.application.eventsourcing.{ Envelope, EventMetadata, OptimisticConcurrencyException, Version }
 
 import scala.compat.java8.FutureConverters._
 import scala.jdk.CollectionConverters._
+import scala.util.{ Failure, Success }
 
 class EventStore[M](val client: StreamsClient, eventSerde: Serde[M]) extends eventsourcing.EventStore[M] {
   def truncateStreamBefore(streamId: String, version: Version): Task[Unit] = {
@@ -49,7 +50,8 @@ class EventStore[M](val client: StreamsClient, eventSerde: Serde[M]) extends eve
             result <- Task.deferFuture(
               client.readStream(Direction.Forward, streamId, revision, pageSize, false).toScala
             )
-            events <- Task.fromTry(result.getEvents.asScala.toList.traverse(eventSerde.deserialize))
+//            events <- Task.fromTry(result.getEvents.asScala.toList.traverse(eventSerde.deserialize)) // TODO: Handle deserialization errors in a better way
+            events <- Task.now(result.getEvents.asScala.toList.flatMap(eventSerde.deserialize(_).toOption))
           } yield {
             if (events.size < pageSize) (events, StreamRevision.END)
             else (events, new StreamRevision(revision.getValueUnsigned + events.size))
@@ -66,17 +68,35 @@ class EventStore[M](val client: StreamsClient, eventSerde: Serde[M]) extends eve
   ): Task[Version] =
     for {
       events <- serialise(events, metadata)
-      result <- Task.deferFuture {
-        client.appendToStream(streamId, SpecialStreamRevision.NO_STREAM, events.asJava).toScala
-      }
+      result <- Task
+        .deferFuture {
+          client.appendToStream(streamId, SpecialStreamRevision.NO_STREAM, events.asJava).toScala
+        }
+        .onErrorHandleWith {
+          case _: WrongExpectedVersionException =>
+            Task.raiseError(
+              OptimisticConcurrencyException(
+                s"Unable to create a new stream ${streamId}, check if stream already exists"
+              )
+            )
+        }
     } yield result.getNextExpectedRevision.getValueUnsigned
 
   override def subscribeToAll(fromPosition: Position = Position.START): Observable[Envelope[M]] = {
     SubscriptionObservable(
       client.subscribeToAll(fromPosition, false, _)
-    ).mapEval { resolvedEvent =>
-      Task.fromTry(eventSerde.deserialize(resolvedEvent))
+    ).flatMap { resolvedEvent =>
+      eventSerde.deserialize(resolvedEvent) match {
+        case Success(value) => Observable.now(value)
+        case Failure(_)     => Observable.empty
+      }
     }
+//    TODO: Handle deserialization errors
+//    SubscriptionObservable(
+//      client.subscribeToAll(fromPosition, false, _)
+//    ).mapEval { resolvedEvent =>
+//      Task.fromTry(eventSerde.deserialize(resolvedEvent))
+//    }
   }
 
   override def appendToStream(

@@ -20,3 +20,5 @@ trait EventStore[M] {
 
   def subscribeToAll(fromPosition: Position = Position.START): Observable[Envelope[M]]
 }
+
+case class OptimisticConcurrencyException(message: String) extends RuntimeException(message)

@@ -18,4 +18,6 @@ class CommandHandler(implicit uuidGenerator: UuidGenerator, clock: Clock)
     case (booked: BookedSlot, _: Cancel) if booked.isStarted(clock) => SlotAlreadyStarted()
     case (BookedSlot(eventId, _, _, _), Cancel(reason))             => Cancelled(eventId, reason)
   }
+
+  override val initialState: State = UnscheduledSlot
 }

@@ -15,14 +15,26 @@ class OverbookingProcessManagerSpec extends EventHandlerSpec with MongoDbSpec {
   override def enableAtLeastOnceMonkey = false
   override def enableWonkyIoMonkey     = false
 
+  val today: LocalDate           = LocalDate.now(clock)
+  val tenAm: LocalTime           = LocalTime.of(10, 0)
+  val tenAmToday: LocalDateTime  = LocalDateTime.of(today, tenAm)
+  val tenMinutes: FiniteDuration = 10.minutes
+
+  val repository: BookedSlotsRepository = new MongoDbBookedSlotsRepository(database)
+
+  private val bookingLimitPerPatient = 3
+  override def handler: EventHandler =
+    new OverbookingProcessManager(repository, commandBus, bookingLimitPerPatient)
+
   "overbooking process manager" should {
     "increment the visit counter every time a patient books a slot" in {
       val patientId = "John Doe"
 
-      val scheduled1 = SlotScheduled(SlotId.create, DayId.create, tenAmToday, tenMinutes)
-      val scheduled2 = SlotScheduled(SlotId.create, DayId.create, tenAmToday.plusMinutes(10), tenMinutes)
-      val booked1    = SlotBooked(scheduled1.slotId, patientId)
-      val booked2    = SlotBooked(scheduled2.slotId, patientId)
+      val scheduled1 = SlotScheduled(SlotId.create, DayId(DoctorId("123"), today), tenAmToday, tenMinutes)
+      val scheduled2 =
+        SlotScheduled(SlotId.create, DayId(DoctorId("123"), today), tenAmToday.plusMinutes(10), tenMinutes)
+      val booked1 = SlotBooked(scheduled1.slotId, patientId)
+      val booked2 = SlotBooked(scheduled2.slotId, patientId)
 
       `given`(scheduled1, scheduled2, booked1, booked2)
       `then` {
@@ -33,8 +45,9 @@ class OverbookingProcessManagerSpec extends EventHandlerSpec with MongoDbSpec {
     "decrement the counter every time a slot booking is cancelled" in {
       val patientId = "John Doe"
 
-      val scheduled1           = SlotScheduled(SlotId.create, DayId.create, tenAmToday, tenMinutes)
-      val scheduled2           = SlotScheduled(SlotId.create, DayId.create, tenAmToday.plusMinutes(10), tenMinutes)
+      val scheduled1 = SlotScheduled(SlotId.create, DayId(DoctorId("123"), today), tenAmToday, tenMinutes)
+      val scheduled2 =
+        SlotScheduled(SlotId.create, DayId(DoctorId("123"), today), tenAmToday.plusMinutes(10), tenMinutes)
       val booked1              = SlotBooked(scheduled1.slotId, patientId)
       val booked2              = SlotBooked(scheduled2.slotId, patientId)
       val slotBookingCancelled = SlotBookingCancelled(scheduled2.slotId, "I'm healthy!")
@@ -48,7 +61,7 @@ class OverbookingProcessManagerSpec extends EventHandlerSpec with MongoDbSpec {
     "send command to cancel a slot if the booking limit was crossed" in {
       val patientId = "John Doe"
 
-      val dayId = DayId.create
+      val dayId = DayId(DoctorId("123"), today)
 
       val scheduled1 = SlotScheduled(SlotId.create, dayId, tenAmToday, tenMinutes)
       val scheduled2 = SlotScheduled(SlotId.create, dayId, scheduled1.startTime.plusMinutes(10), tenMinutes)
@@ -69,22 +82,11 @@ class OverbookingProcessManagerSpec extends EventHandlerSpec with MongoDbSpec {
           sentCommands shouldEqual Seq(
             CommandEnvelope(
               CancelSlotBooking(booked4.slotId, "Overbooking"),
-              CommandMetadata(metadata.correlationId, metadata.causationId, AggregateId(dayId.toString))
+              CommandMetadata(metadata.correlationId, CausationId.create, DoctorDayId(dayId))
             )
           )
         }
       }
     }
   }
-
-  val today: LocalDate           = LocalDate.now(clock)
-  val tenAm: LocalTime           = LocalTime.of(10, 0)
-  val tenAmToday: LocalDateTime  = LocalDateTime.of(today, tenAm)
-  val tenMinutes: FiniteDuration = 10.minutes
-
-  val repository: BookedSlotsRepository = new MongoDbBookedSlotsRepository(database)
-
-  private val bookingLimitPerPatient = 3
-  override def handler: EventHandler =
-    new OverbookingProcessManager(repository, commandBus, bookingLimitPerPatient)
 }

@@ -3,7 +3,7 @@ package net.domaincentric.scheduling.infrastructure.mongodb
 import java.time.Month
 
 import monix.eval.Task
-import net.domaincentric.scheduling.domain.aggregate.doctorday.{ DayId, SlotId }
+import net.domaincentric.scheduling.domain.aggregate.doctorday.{ DayId, DoctorId, SlotId }
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository.Slot
 import org.bson.codecs.configuration.CodecRegistries.{ fromProviders, fromRegistries }
@@ -23,7 +23,7 @@ class MongoDbBookedSlotsRepository(database: MongoDatabase) extends BookedSlotsR
 
   private val codecRegistry =
     fromRegistries(
-      fromProviders(classOf[SlotDateRow], classOf[DayId], classOf[SlotId], classOf[PatientSlotRow]),
+      fromProviders(classOf[SlotDateRow], classOf[DayId], classOf[SlotId], classOf[PatientSlotRow], classOf[DoctorId]),
       DEFAULT_CODEC_REGISTRY
     )
 

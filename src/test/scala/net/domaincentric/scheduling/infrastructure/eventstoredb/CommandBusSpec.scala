@@ -33,7 +33,7 @@ class CommandBusSpec extends AsyncWordSpec with Matchers {
   "event store command bus" should {
     "read and write commands to a stream" in {
       val booking  = CancelSlotBooking(SlotId.create(RandomUuidGenerator), "test")
-      val metadata = CommandMetadata(CorrelationId.create, CausationId.create, AggregateId("abc"))
+      val metadata = CommandMetadata(CorrelationId.create, CausationId.create, AggregateId("abc", "test"))
       (for {
         _      <- commandBus.send(booking, metadata)
         result <- commandBus.subscribe().take(1).toListL

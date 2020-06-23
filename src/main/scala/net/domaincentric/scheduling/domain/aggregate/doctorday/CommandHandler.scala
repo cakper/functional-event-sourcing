@@ -10,7 +10,7 @@ import net.domaincentric.scheduling.domain.service.UuidGenerator
 class CommandHandler(implicit idGen: UuidGenerator) extends aggregate.CommandHandler[Command, Event, Error, State] {
   override def apply(state: State, command: Command): Either[Error, Seq[Event]] = (state, command) match {
     case (Unscheduled, scheduleDay: ScheduleDay) =>
-      val dayId: DayId = DayId.create
+      val dayId: DayId = DayId(scheduleDay.doctorId, scheduleDay.date)
       DayScheduled(dayId, scheduleDay.doctorId, scheduleDay.date) :: scheduleDay.slots.map { slot =>
         SlotScheduled(
           SlotId.create,
@@ -44,4 +44,6 @@ class CommandHandler(implicit idGen: UuidGenerator) extends aggregate.CommandHan
 
     case (_: Scheduled, _: CancelSlotBooking) => SlotNotBooked
   }
+
+  override val initialState: State = Unscheduled
 }

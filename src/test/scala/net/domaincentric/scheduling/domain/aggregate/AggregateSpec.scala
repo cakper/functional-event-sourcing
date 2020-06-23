@@ -3,7 +3,7 @@ package net.domaincentric.scheduling.domain.aggregate
 import java.time.{ Clock, Instant, ZoneOffset }
 import java.util.UUID
 
-import net.domaincentric.scheduling.application.eventsourcing.Aggregate
+import net.domaincentric.scheduling.application.eventsourcing.{ Aggregate, AggregateId }
 import net.domaincentric.scheduling.test.ReplayableUuidGenerator
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -53,7 +53,7 @@ trait AggregateSpec[C, E, Er, S <: State[S, E]] extends AnyWordSpec with Matcher
   override protected def beforeEach(): Unit = {
     super.beforeEach()
     uuidGenerator.reset()
-    aggregate = new Aggregate[C, E, Er, S](randomString, state(), handler())
+    aggregate = new Aggregate[C, E, Er, S](AggregateId(randomString(), "test"), state(), handler())
   }
 
   protected def randomString(): String = UUID.randomUUID().toString

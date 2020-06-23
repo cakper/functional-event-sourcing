@@ -5,7 +5,7 @@ import java.util.UUID
 
 import monix.eval.Task
 import net.domaincentric.scheduling.application.eventsourcing.{ AggregateId, CausationId, CommandBus, CommandMetadata, CorrelationId, EventHandler, EventMetadata, Version }
-import net.domaincentric.scheduling.domain.aggregate.doctorday.{ CancelSlotBooking, SlotBooked, SlotBookingCancelled, SlotScheduled }
+import net.domaincentric.scheduling.domain.aggregate.doctorday.{ CancelSlotBooking, DoctorDayId, SlotBooked, SlotBookingCancelled, SlotScheduled }
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository.Slot
 import net.domaincentric.scheduling.domain.service.UuidGenerator
@@ -33,7 +33,7 @@ class OverbookingProcessManager(repository: BookedSlotsRepository, commandBus: C
             else
               commandBus.send(
                 CancelSlotBooking(slotId, "Overbooking"),
-                CommandMetadata(metadata.correlationId, CausationId.create, AggregateId(slot.dayId.toString))
+                CommandMetadata(metadata.correlationId, CausationId.create, DoctorDayId(slot.dayId))
               )
           } yield ()
       }

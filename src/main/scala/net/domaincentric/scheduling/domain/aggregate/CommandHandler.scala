@@ -2,6 +2,7 @@ package net.domaincentric.scheduling.domain.aggregate
 
 trait CommandHandler[C, E, Er, S <: State[S, E]] {
   def apply(state: S, command: C): Either[Er, Seq[E]]
+  def initialState: S
 }
 
 object CommandHandler {

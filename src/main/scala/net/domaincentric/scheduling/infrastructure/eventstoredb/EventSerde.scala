@@ -1,7 +1,6 @@
 package net.domaincentric.scheduling.infrastructure.eventstoredb
 
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 
 import com.eventstore.dbclient.{ ProposedEvent, ResolvedEvent }
 import io.circe._
@@ -11,8 +10,8 @@ import io.circe.syntax._
 import net.domaincentric.scheduling.application.eventsourcing
 import net.domaincentric.scheduling.application.eventsourcing.{ Envelope, EventMetadata }
 import net.domaincentric.scheduling.domain.aggregate.doctorday._
-
 import net.domaincentric.scheduling.infrastructure.circe.Implicits._
+
 import scala.util.Try
 
 class EventSerde extends Serde[EventMetadata] {
@@ -54,7 +53,7 @@ class EventSerde extends Serde[EventMetadata] {
       eventType,
       "application/json",
       data.noSpaces.getBytes,
-      metadata.asJson.noSpaces.getBytes
+      metadata.asJson.dropNullValues.noSpaces.getBytes
     )
   }
 }

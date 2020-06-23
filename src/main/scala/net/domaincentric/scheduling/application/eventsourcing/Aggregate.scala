@@ -3,7 +3,7 @@ package net.domaincentric.scheduling.application.eventsourcing
 import net.domaincentric.scheduling.domain.aggregate.{ CommandHandler, State }
 
 case class Aggregate[C, E, Er, S <: State[S, E]](
-    id: String,
+    id: AggregateId,
     state: S,
     handler: CommandHandler[C, E, Er, S],
     version: Version = Version.`new`,
