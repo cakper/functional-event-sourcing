@@ -3,6 +3,8 @@ package net.domaincentric.scheduling.infrastructure.eventstoredb
 import java.util.UUID
 
 import cats.implicits._
+import com.eventstore.dbclient.Direction.{ Backward, Forward }
+import com.eventstore.dbclient.StreamRevision.END
 import com.eventstore.dbclient._
 import monix.eval.Task
 import monix.reactive.Observable
@@ -16,36 +18,34 @@ import scala.util.{ Failure, Success }
 
 class EventStore[M](client: StreamsClient, eventSerde: Serde[M]) extends eventsourcing.EventStore[M] {
   private val pageSize = 4096
-//  private val subscriptionFilter: SubscriptionFilter =
-//    new SubscriptionFilterBuilder().withEventTypePrefix(eventSerde.prefix).build()
 
   override def readFromStream(streamId: String, fromVersion: Version = Version(0)): Observable[MessageEnvelope[M]] = {
     Observable
-      .fromAsyncStateAction[StreamRevision, Seq[MessageEnvelope[M]]] {
-        case StreamRevision.END => Task.now((Seq.empty, StreamRevision.END))
+      .fromAsyncStateAction[StreamRevision, Seq[ResolvedEvent]] {
+        case END => Task.now((Seq.empty, END))
         case revision =>
           for {
             result <- Task.deferFuture(
-              client.readStream(Direction.Forward, streamId, revision, pageSize, false).toScala
+              client.readStream(Forward, streamId, revision, pageSize, false).toScala
             )
-//            events <- Task.fromTry(result.getEvents.asScala.toList.traverse(eventSerde.deserialize))
-            events <- Task.now(result.getEvents.asScala.toList.map(eventSerde.deserialize(_).get)) // TODO: Handle deserialization errors in a better way
+            events <- Task.now(result.getEvents.asScala.toList)
           } yield {
-            if (events.size < pageSize) (events, StreamRevision.END)
+            if (events.size < pageSize) (events, END)
             else (events, new StreamRevision(revision.getValueUnsigned + events.size))
           }
       }(new StreamRevision(fromVersion.value))
       .takeWhile(_.nonEmpty)
       .flatMap(Observable.fromIterable)
+      .flatMap(deserialize)
   }
 
   override def readLastFromStream(streamId: String): Task[Option[MessageEnvelope[M]]] =
     Task
-      .deferFuture(
-        client.readStream(Direction.Backward, streamId, StreamRevision.END, 1, false).toScala
-      )
-      .map { result =>
-        result.getEvents.asScala.toList.headOption.map(eventSerde.deserialize(_).get)
+      .deferFuture(client.readStream(Backward, streamId, END, 1, false).toScala)
+      .map(_.getEvents.asScala.toList.headOption)
+      .map {
+        case Some(resolvedEvent) => eventSerde.deserialize(resolvedEvent).toOption
+        case None                => None
       }
 
   override def createNewStream(
@@ -97,12 +97,7 @@ class EventStore[M](client: StreamsClient, eventSerde: Serde[M]) extends eventso
   override def deleteStream(streamId: String, expectedVersion: Version): Task[Unit] =
     Task
       .deferFuture {
-        client
-          .softDelete(
-            streamId,
-            new StreamRevision(expectedVersion)
-          )
-          .toScala
+        client.softDelete(streamId, new StreamRevision(expectedVersion)).toScala
       }
       .map(_ => ())
 
@@ -131,13 +126,7 @@ class EventStore[M](client: StreamsClient, eventSerde: Serde[M]) extends eventso
   override def subscribeToAll(fromCheckpoint: Option[Checkpoint] = None): Observable[MessageEnvelope[M]] = {
     SubscriptionObservable(
       client.subscribeToAll(fromCheckpoint.map(x => new Position(x.value, x.value)).getOrElse(Position.START), false, _)
-    ).flatMap { resolvedEvent =>
-      eventSerde.deserialize(resolvedEvent) match {
-        case Success(value) => Observable.now(value)
-        case Failure(_)     => Observable.empty
-      }
-    }
-    //    TODO: Handle deserialization errors
+    ).flatMap(deserialize)
   }
 
   override def subscribeToStream(stream: String, fromCheckpoint: Option[Checkpoint]): Observable[MessageEnvelope[M]] = {
@@ -149,12 +138,13 @@ class EventStore[M](client: StreamsClient, eventSerde: Serde[M]) extends eventso
           true,
           _
         )
-    ).flatMap { resolvedEvent =>
-      eventSerde.deserialize(resolvedEvent) match {
-        case Success(value) => Observable.now(value)
-        case Failure(_)     => Observable.empty
-      }
+    ).flatMap(deserialize)
+  }
+
+  private def deserialize: Function[ResolvedEvent, Observable[MessageEnvelope[M]]] = { resolvedEvent =>
+    eventSerde.deserialize(resolvedEvent) match {
+      case Success(value) => Observable.now(value)
+      case Failure(_)     => Observable.empty
     }
-    //    TODO: Handle deserialization errors
   }
 }
