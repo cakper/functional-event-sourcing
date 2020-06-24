@@ -4,4 +4,4 @@ import java.time.LocalDate
 
 trait Event
 
-case class CalendarDayStarted(date: LocalDate)
+case class CalendarDayStarted(date: LocalDate) extends Event

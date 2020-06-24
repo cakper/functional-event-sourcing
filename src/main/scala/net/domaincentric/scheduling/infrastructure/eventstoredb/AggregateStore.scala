@@ -3,8 +3,10 @@ import monix.eval.Task
 import net.domaincentric.scheduling.application.eventsourcing
 import net.domaincentric.scheduling.application.eventsourcing.SnapshotStore.SnapshotEnvelope
 import net.domaincentric.scheduling.application.eventsourcing.Version.`new`
-import net.domaincentric.scheduling.application.eventsourcing.{ Aggregate, EventMetadata, SnapshotMetadata }
+import net.domaincentric.scheduling.application.eventsourcing.{ Aggregate, EventMetadata, OptimisticConcurrencyException, SnapshotMetadata }
 import net.domaincentric.scheduling.domain.writemodel.State
+
+object StreamAlreadyExists extends RuntimeException
 
 class AggregateStore(
     eventStore: EventStore[EventMetadata],
@@ -17,7 +19,10 @@ class AggregateStore(
   ): Task[Aggregate[C, E, Er, S]] =
     for {
       _ <- aggregate.version match {
-        case `new`   => eventStore.createNewStream(aggregate.id.toString, aggregate.changes, metadata)
+        case `new` =>
+          eventStore.createNewStream(aggregate.id.toString, aggregate.changes, metadata).onErrorRecoverWith {
+            case _: OptimisticConcurrencyException => Task.raiseError(StreamAlreadyExists)
+          }
         case version => eventStore.appendToStream(aggregate.id.toString, aggregate.changes, metadata, version)
       }
       committed <- Task.now(aggregate.markAsCommitted)

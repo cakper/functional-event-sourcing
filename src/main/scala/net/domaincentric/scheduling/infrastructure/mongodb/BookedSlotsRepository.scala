@@ -3,9 +3,9 @@ package net.domaincentric.scheduling.infrastructure.mongodb
 import java.time.Month
 
 import monix.eval.Task
-import net.domaincentric.scheduling.domain.writemodel.doctorday.{ DayId, DoctorId, PatientId, SlotId }
-import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository
+import net.domaincentric.scheduling.domain.readmodel.bookedslots
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository.Slot
+import net.domaincentric.scheduling.domain.writemodel.doctorday.{ DayId, DoctorId, PatientId, SlotId }
 import org.bson.codecs.configuration.CodecRegistries.{ fromProviders, fromRegistries }
 import org.mongodb.scala.MongoClient.DEFAULT_CODEC_REGISTRY
 import org.mongodb.scala.bson.ObjectId
@@ -13,7 +13,7 @@ import org.mongodb.scala.bson.codecs.Macros._
 import org.mongodb.scala.model.Filters.{ and, equal }
 import org.mongodb.scala.{ MongoCollection, MongoDatabase }
 
-class MongodbBookedSlotsRepository(database: MongoDatabase) extends BookedSlotsRepository {
+class BookedSlotsRepository(database: MongoDatabase) extends bookedslots.BookedSlotsRepository {
   case class SlotDateRow(_id: ObjectId, slotId: SlotId, dayId: DayId, monthNumber: Int) {
     def month: Month = Month.of(monthNumber)
   }
@@ -101,3 +101,5 @@ class MongodbBookedSlotsRepository(database: MongoDatabase) extends BookedSlotsR
       }
       .map(_.map(_.slotId))
 }
+
+case class UnableToFindSlot(message: String) extends RuntimeException(message) {}

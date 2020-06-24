@@ -4,11 +4,12 @@ import java.time.Instant
 import java.util.UUID
 
 import monix.eval.Task
-import net.domaincentric.scheduling.application.eventsourcing.{ AggregateId, CausationId, CommandBus, CommandMetadata, CorrelationId, MessageHandler, EventMetadata, Version }
+import net.domaincentric.scheduling.application.eventsourcing.{ AggregateId, CausationId, CommandBus, CommandMetadata, CorrelationId, EventMetadata, MessageHandler, Version }
 import net.domaincentric.scheduling.domain.writemodel.doctorday.{ CancelSlotBooking, DoctorDayId, SlotBooked, SlotBookingCancelled, SlotScheduled }
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository.Slot
 import net.domaincentric.scheduling.domain.service.UuidGenerator
+import net.domaincentric.scheduling.infrastructure.mongodb.UnableToFindSlot
 
 class OverbookingProcessManager(repository: BookedSlotsRepository, commandBus: CommandBus, bookingLimitPerPatient: Int)(
     implicit uuidGenerator: UuidGenerator
@@ -26,7 +27,7 @@ class OverbookingProcessManager(repository: BookedSlotsRepository, commandBus: C
       repository.findAllSlotIdsFor(patientId).flatMap {
         case slotIds if slotIds.contains(slotId) => Task.unit
         case _ =>
-          for {
+          (for {
             _     <- repository.markSlotAsBooked(slotId, patientId)
             slot  <- repository.getSlot(slotId)
             count <- repository.countByPatientAndMonth(patientId, slot.month)
@@ -36,7 +37,9 @@ class OverbookingProcessManager(repository: BookedSlotsRepository, commandBus: C
                 CancelSlotBooking(slotId, "Overbooking"),
                 CommandMetadata(metadata.correlationId, CausationId.create, DoctorDayId(slot.dayId))
               )
-          } yield ()
+          } yield ()).onErrorRecover {
+            case UnableToFindSlot(_) => ()
+          }
       }
 
     case SlotBookingCancelled(slotId, _) => repository.markSlotAsAvailable(slotId)

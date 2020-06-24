@@ -3,10 +3,9 @@ package net.domaincentric.scheduling.application.messagehandlers
 import java.time.{ LocalDate, LocalDateTime, LocalTime }
 
 import net.domaincentric.scheduling.application.eventsourcing.CommandBus.CommandEnvelope
-import net.domaincentric.scheduling.application.eventsourcing.{ AggregateId, CausationId, CommandMetadata, MessageHandler }
+import net.domaincentric.scheduling.application.eventsourcing.{ CausationId, CommandMetadata }
 import net.domaincentric.scheduling.domain.writemodel.doctorday._
-import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository
-import net.domaincentric.scheduling.infrastructure.mongodb.MongodbBookedSlotsRepository
+import net.domaincentric.scheduling.infrastructure.mongodb.BookedSlotsRepository
 import net.domaincentric.scheduling.test.{ EventHandlerSpec, MongoDb }
 
 import scala.concurrent.duration._
@@ -20,7 +19,7 @@ class OverbookingProcessManagerSpec extends EventHandlerSpec with MongoDb {
   val tenAmToday: LocalDateTime  = LocalDateTime.of(today, tenAm)
   val tenMinutes: FiniteDuration = 10.minutes
 
-  val repository: BookedSlotsRepository = new MongodbBookedSlotsRepository(database)
+  val repository: BookedSlotsRepository = new BookedSlotsRepository(database)
 
   private val bookingLimitPerPatient = 3
 

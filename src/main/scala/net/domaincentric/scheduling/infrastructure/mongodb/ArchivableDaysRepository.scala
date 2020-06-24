@@ -3,7 +3,7 @@ package net.domaincentric.scheduling.infrastructure.mongodb
 import java.time.LocalDate
 
 import monix.eval.Task
-import net.domaincentric.scheduling.domain.readmodel.archivableday.ArchivableDaysRepository
+import net.domaincentric.scheduling.domain.readmodel.archivableday
 import net.domaincentric.scheduling.domain.writemodel.doctorday.DayId
 import org.bson.codecs.configuration.CodecRegistries.{ fromProviders, fromRegistries }
 import org.mongodb.scala.MongoClient.DEFAULT_CODEC_REGISTRY
@@ -12,7 +12,7 @@ import org.mongodb.scala.bson.codecs.Macros._
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.{ MongoCollection, MongoDatabase }
 
-class MongodbArchivableDaysRepository(database: MongoDatabase) extends ArchivableDaysRepository {
+class ArchivableDaysRepository(database: MongoDatabase) extends archivableday.ArchivableDaysRepository {
   case class Row(_id: ObjectId, date: LocalDate, dayId: DayId)
 
   private val codecRegistry = fromRegistries(fromProviders(classOf[Row], classOf[DayId]), DEFAULT_CODEC_REGISTRY)

@@ -4,6 +4,7 @@ import java.time.LocalDate
 
 import monix.eval.Task
 import net.domaincentric.scheduling.domain.writemodel.doctorday.{ DayId, DoctorId, SlotId }
+import net.domaincentric.scheduling.domain.readmodel.avialbleslots
 import net.domaincentric.scheduling.domain.readmodel.avialbleslots.{ AvailableSlot, AvailableSlotsRepository }
 import org.bson.codecs.configuration.CodecRegistries.{ fromProviders, fromRegistries }
 import org.mongodb.scala.MongoClient.DEFAULT_CODEC_REGISTRY
@@ -13,7 +14,7 @@ import org.mongodb.scala.model.Filters.{ and, equal }
 import org.mongodb.scala.model.Updates.set
 import org.mongodb.scala.{ MongoCollection, MongoDatabase }
 
-class MongodbAvailableSlotsRepository(database: MongoDatabase) extends AvailableSlotsRepository {
+class AvailableSlotsRepository(database: MongoDatabase) extends avialbleslots.AvailableSlotsRepository {
   case class SlotRow(_id: ObjectId, data: AvailableSlot, hidden: Boolean)
 
   private val codecRegistry =

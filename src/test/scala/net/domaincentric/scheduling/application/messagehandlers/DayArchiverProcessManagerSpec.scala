@@ -10,7 +10,7 @@ import net.domaincentric.scheduling.domain.writemodel.calendar.CalendarDayStarte
 import net.domaincentric.scheduling.domain.writemodel.doctorday._
 import net.domaincentric.scheduling.infrastructure.eventstoredb.{ EventSerde, EventStore }
 import net.domaincentric.scheduling.infrastructure.inmemory.ColdStorage
-import net.domaincentric.scheduling.infrastructure.mongodb.MongodbArchivableDaysRepository
+import net.domaincentric.scheduling.infrastructure.mongodb.ArchivableDaysRepository
 import net.domaincentric.scheduling.test.{ EventHandlerSpec, EventStoreDb, MongoDb }
 
 import scala.concurrent.duration._
@@ -18,7 +18,7 @@ import scala.concurrent.duration._
 class DayArchiverProcessManagerSpec extends EventHandlerSpec with MongoDb with EventStoreDb {
   private val eventStore  = new EventStore(streamsClient, new EventSerde)
   private val coldStorage = new ColdStorage
-  private val repository  = new MongodbArchivableDaysRepository(database)
+  private val repository  = new ArchivableDaysRepository(database)
 
   override def handler: MessageHandler[EventMetadata] =
     new DayArchiverProcessManager(coldStorage, eventStore, repository, commandBus)
