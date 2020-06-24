@@ -7,7 +7,7 @@ import io.grpc.netty.shaded.io.netty.handler.ssl.util.InsecureTrustManagerFactor
 import javax.net.ssl.SSLException
 import monix.eval.{ Task, TaskApp }
 import monix.reactive.Consumer
-import net.domaincentric.scheduling.application.eventhandlers.{ AsyncCommandHandler, AvailableSlotsProjector, OverbookingProcessManager }
+import net.domaincentric.scheduling.application.messagehandlers.{ AsyncCommandHandler, AvailableSlotsProjector, OverbookingProcessManager }
 import net.domaincentric.scheduling.application.eventsourcing.{ PersistentSubscription, SubscriptionId }
 import net.domaincentric.scheduling.application.http.Http
 import net.domaincentric.scheduling.domain.service.{ RandomUuidGenerator, UuidGenerator }

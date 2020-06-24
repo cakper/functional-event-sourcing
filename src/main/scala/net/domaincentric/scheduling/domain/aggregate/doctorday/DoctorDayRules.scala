@@ -4,10 +4,10 @@ import java.time.LocalDateTime
 import java.util.UUID
 
 import net.domaincentric.scheduling.domain.aggregate
-import net.domaincentric.scheduling.domain.aggregate.CommandHandler._
+import net.domaincentric.scheduling.domain.aggregate.Rules._
 import net.domaincentric.scheduling.domain.service.UuidGenerator
 
-class CommandHandler(implicit idGen: UuidGenerator) extends aggregate.CommandHandler[Command, Event, Error, State] {
+class DoctorDayRules(implicit idGen: UuidGenerator) extends aggregate.Rules[Command, Event, Error, State] {
   override def apply(state: State, command: Command): Either[Error, Seq[Event]] = (state, command) match {
     case (Unscheduled, scheduleDay: ScheduleDay) =>
       val dayId: DayId = DayId(scheduleDay.doctorId, scheduleDay.date)

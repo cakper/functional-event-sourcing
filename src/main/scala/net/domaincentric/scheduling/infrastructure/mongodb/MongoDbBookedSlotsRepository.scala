@@ -3,7 +3,7 @@ package net.domaincentric.scheduling.infrastructure.mongodb
 import java.time.Month
 
 import monix.eval.Task
-import net.domaincentric.scheduling.domain.aggregate.doctorday.{ DayId, DoctorId, SlotId }
+import net.domaincentric.scheduling.domain.aggregate.doctorday.{ DayId, DoctorId, PatientId, SlotId }
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository.Slot
 import org.bson.codecs.configuration.CodecRegistries.{ fromProviders, fromRegistries }
@@ -17,13 +17,20 @@ class MongoDbBookedSlotsRepository(database: MongoDatabase) extends BookedSlotsR
   case class SlotDateRow(_id: ObjectId, slotId: SlotId, dayId: DayId, monthNumber: Int) {
     def month: Month = Month.of(monthNumber)
   }
-  case class PatientSlotRow(_id: ObjectId, patientId: String, monthNumber: Int, slotId: SlotId) {
+  case class PatientSlotRow(_id: ObjectId, patientId: PatientId, monthNumber: Int, slotId: SlotId) {
     def month: Month = Month.of(monthNumber)
   }
 
   private val codecRegistry =
     fromRegistries(
-      fromProviders(classOf[SlotDateRow], classOf[DayId], classOf[SlotId], classOf[PatientSlotRow], classOf[DoctorId]),
+      fromProviders(
+        classOf[SlotDateRow],
+        classOf[DayId],
+        classOf[SlotId],
+        classOf[PatientSlotRow],
+        classOf[DoctorId],
+        classOf[PatientId]
+      ),
       DEFAULT_CODEC_REGISTRY
     )
 
@@ -33,7 +40,7 @@ class MongoDbBookedSlotsRepository(database: MongoDatabase) extends BookedSlotsR
   private val patientSlots: MongoCollection[PatientSlotRow] =
     database.withCodecRegistry(codecRegistry).getCollection("patient_slots")
 
-  override def countByPatientAndMonth(patientId: String, month: Month): Task[Int] =
+  override def countByPatientAndMonth(patientId: PatientId, month: Month): Task[Int] =
     Task
       .deferFuture {
         patientSlots
@@ -53,7 +60,7 @@ class MongoDbBookedSlotsRepository(database: MongoDatabase) extends BookedSlotsR
       }
       .map(_ => ())
 
-  override def markSlotAsBooked(slotId: SlotId, patientId: String): Task[Unit] =
+  override def markSlotAsBooked(slotId: SlotId, patientId: PatientId): Task[Unit] =
     for {
       slot <- findSlot(slotId)
       _ <- Task
@@ -85,7 +92,7 @@ class MongoDbBookedSlotsRepository(database: MongoDatabase) extends BookedSlotsR
       }
   }
 
-  override def findAllSlotIdsFor(patientId: String): Task[Seq[SlotId]] =
+  override def findAllSlotIdsFor(patientId: PatientId): Task[Seq[SlotId]] =
     Task
       .deferFuture {
         patientSlots

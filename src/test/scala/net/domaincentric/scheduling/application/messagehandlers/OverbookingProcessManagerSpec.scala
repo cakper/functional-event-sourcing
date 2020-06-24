@@ -1,4 +1,4 @@
-package net.domaincentric.scheduling.application.eventhandlers
+package net.domaincentric.scheduling.application.messagehandlers
 
 import java.time.{ LocalDate, LocalDateTime, LocalTime }
 
@@ -28,7 +28,7 @@ class OverbookingProcessManagerSpec extends EventHandlerSpec with MongoDbSpec {
 
   "overbooking process manager" should {
     "increment the visit counter every time a patient books a slot" in {
-      val patientId = "John Doe"
+      val patientId = PatientId("John Doe")
 
       val scheduled1 = SlotScheduled(SlotId.create, DayId(DoctorId("123"), today), tenAmToday, tenMinutes)
       val scheduled2 =
@@ -43,7 +43,7 @@ class OverbookingProcessManagerSpec extends EventHandlerSpec with MongoDbSpec {
     }
 
     "decrement the counter every time a slot booking is cancelled" in {
-      val patientId = "John Doe"
+      val patientId = PatientId("John Doe")
 
       val scheduled1 = SlotScheduled(SlotId.create, DayId(DoctorId("123"), today), tenAmToday, tenMinutes)
       val scheduled2 =
@@ -59,9 +59,8 @@ class OverbookingProcessManagerSpec extends EventHandlerSpec with MongoDbSpec {
     }
 
     "send command to cancel a slot if the booking limit was crossed" in {
-      val patientId = "John Doe"
-
-      val dayId = DayId(DoctorId("123"), today)
+      val patientId = PatientId("John Doe")
+      val dayId     = DayId(DoctorId("123"), today)
 
       val scheduled1 = SlotScheduled(SlotId.create, dayId, tenAmToday, tenMinutes)
       val scheduled2 = SlotScheduled(SlotId.create, dayId, scheduled1.startTime.plusMinutes(10), tenMinutes)

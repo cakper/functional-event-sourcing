@@ -1,4 +1,4 @@
-package net.domaincentric.scheduling.application.eventhandlers
+package net.domaincentric.scheduling.application.messagehandlers
 
 import java.time.Instant
 import java.util.UUID

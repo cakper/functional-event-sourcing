@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import io.circe.generic.extras.semiauto.{ deriveUnwrappedDecoder, deriveUnwrappedEncoder }
 import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json, JsonObject }
 import net.domaincentric.scheduling.application.eventsourcing.{ CausationId, CorrelationId, Version }
-import net.domaincentric.scheduling.domain.aggregate.doctorday.{ DayId, DoctorId, SlotId }
+import net.domaincentric.scheduling.domain.aggregate.doctorday.{ DayId, DoctorId, PatientId, SlotId }
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -37,4 +37,6 @@ object Implicits {
   implicit val doctorIdDecoder: Decoder[DoctorId]           = deriveUnwrappedDecoder
   implicit val versionEncoder: Encoder[Version]             = deriveUnwrappedEncoder
   implicit val versionDecoder: Decoder[Version]             = deriveUnwrappedDecoder
+  implicit val patientIdEncoder: Encoder[PatientId]         = deriveUnwrappedEncoder
+  implicit val patientIdDecoder: Decoder[PatientId]         = deriveUnwrappedDecoder
 }

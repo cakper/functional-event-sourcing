@@ -1,4 +1,4 @@
-package net.domaincentric.scheduling.application.eventhandlers
+package net.domaincentric.scheduling.application.messagehandlers
 
 import java.time.{ Duration => _, _ }
 
@@ -41,14 +41,14 @@ class AvailableSlotsProjectorSpec extends EventHandlerSpec with MongoDbSpec {
 
     "hide slot from the list if it was booked" in {
       val scheduled = SlotScheduled(SlotId.create, DayId(DoctorId("123"), today), tenAmToday, tenMinutes)
-      val booked    = SlotBooked(scheduled.slotId, "John Doe")
+      val booked    = SlotBooked(scheduled.slotId, PatientId("John Doe"))
       `given`(scheduled, booked)
       `then`(repository.getAvailableSlotsOn(today).map(_ shouldEqual Seq.empty))
     }
 
     "show slot if booking was cancelled" in {
       val scheduled = SlotScheduled(SlotId.create, DayId(DoctorId("123"), today), tenAmToday, tenMinutes)
-      val booked    = SlotBooked(scheduled.slotId, "John Doe")
+      val booked    = SlotBooked(scheduled.slotId, PatientId("John Doe"))
       val cancelled = SlotBookingCancelled(scheduled.slotId, "Can't make it")
       `given`(scheduled, booked, cancelled)
       `then`(

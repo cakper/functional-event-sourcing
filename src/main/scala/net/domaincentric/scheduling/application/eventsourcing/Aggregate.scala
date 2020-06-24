@@ -1,16 +1,16 @@
 package net.domaincentric.scheduling.application.eventsourcing
 
-import net.domaincentric.scheduling.domain.aggregate.{ CommandHandler, State }
+import net.domaincentric.scheduling.domain.aggregate.{ Rules, State }
 
 case class Aggregate[C, E, Er, S <: State[S, E]](
     id: AggregateId,
     state: S,
-    handler: CommandHandler[C, E, Er, S],
+    rules: Rules[C, E, Er, S],
     version: Version = Version.`new`,
     changes: Seq[E] = Seq.empty
 ) {
   def handle(command: C): Either[Er, Aggregate[C, E, Er, S]] =
-    handler(state, command).map { newEvents =>
+    rules(state, command).map { newEvents =>
       copy(state = newEvents.foldLeft(state)(_.apply(_)), changes = changes.appendedAll(newEvents))
     }
 
@@ -32,6 +32,6 @@ case class Aggregate[C, E, Er, S <: State[S, E]](
 object Aggregate {
   def apply[C, E, Er, S <: State[S, E]](
       id: AggregateId,
-      handler: CommandHandler[C, E, Er, S]
+      handler: Rules[C, E, Er, S]
   ): Aggregate[C, E, Er, S] = Aggregate(id, handler.initialState, handler)
 }

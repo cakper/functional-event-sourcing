@@ -10,7 +10,7 @@ import scala.concurrent.duration._
 class DoctorDayAggregateSpec extends AggregateSpec[Command, Event, Error, State] {
   override def state() = Unscheduled
 
-  override def handler() = new CommandHandler
+  override def handler() = new DoctorDayRules
 
   private val today: LocalDate           = LocalDate.now(clock)
   private val tenAm: LocalTime           = LocalTime.of(10, 0)
@@ -50,7 +50,7 @@ class DoctorDayAggregateSpec extends AggregateSpec[Command, Event, Error, State]
     "allow to book a slot" in {
       val dayScheduled  = DayScheduled(dayId, doctorId, today)
       val slotScheduled = SlotScheduled(SlotId.create, dayScheduled.dayId, tenAmToday, 10.minute)
-      val book          = BookSlot(slotScheduled.slotId, randomString())
+      val book          = BookSlot(slotScheduled.slotId, PatientId("John Doe"))
 
       `given`(dayScheduled, slotScheduled)
       `when`(book)
@@ -60,8 +60,8 @@ class DoctorDayAggregateSpec extends AggregateSpec[Command, Event, Error, State]
     "not allow to book a slot twice" in {
       val dayScheduled  = DayScheduled(dayId, doctorId, today)
       val slotScheduled = SlotScheduled(SlotId.create, dayScheduled.dayId, tenAmToday, 10.minute)
-      val slotBooked    = SlotBooked(slotScheduled.slotId, randomString())
-      val book          = BookSlot(slotScheduled.slotId, randomString())
+      val slotBooked    = SlotBooked(slotScheduled.slotId, PatientId("John Doe"))
+      val book          = BookSlot(slotScheduled.slotId, PatientId("John Doe"))
 
       `given`(dayScheduled, slotScheduled, slotBooked)
       `when`(book)
@@ -71,7 +71,7 @@ class DoctorDayAggregateSpec extends AggregateSpec[Command, Event, Error, State]
     "not allow to book unscheduled slot" in {
       val dayScheduled  = DayScheduled(dayId, doctorId, today)
       val slotScheduled = SlotScheduled(SlotId.create, dayScheduled.dayId, tenAmToday, 10.minute)
-      val book          = BookSlot(SlotId.create, randomString())
+      val book          = BookSlot(SlotId.create, PatientId("John Doe"))
 
       `given`(dayScheduled, slotScheduled)
       `when`(book)
@@ -81,7 +81,7 @@ class DoctorDayAggregateSpec extends AggregateSpec[Command, Event, Error, State]
     "allow to cancel booking" in {
       val dayScheduled  = DayScheduled(dayId, doctorId, today)
       val slotScheduled = SlotScheduled(SlotId.create, dayScheduled.dayId, tenAmToday, 10.minute)
-      val slotBooked    = SlotBooked(slotScheduled.slotId, randomString())
+      val slotBooked    = SlotBooked(slotScheduled.slotId, PatientId("John Doe"))
 
       val cancel = CancelSlotBooking(slotScheduled.slotId, randomString())
 
@@ -128,7 +128,7 @@ class DoctorDayAggregateSpec extends AggregateSpec[Command, Event, Error, State]
       val dayScheduled   = DayScheduled(dayId, doctorId, today)
       val slotScheduled1 = SlotScheduled(SlotId.create, dayScheduled.dayId, tenAmToday, tenMinutes)
       val slotScheduled2 = SlotScheduled(SlotId.create, dayScheduled.dayId, tenAmToday.plusMinutes(10), tenMinutes)
-      val slotBooked     = SlotBooked(slotScheduled1.slotId, randomString())
+      val slotBooked     = SlotBooked(slotScheduled1.slotId, PatientId("John Doe"))
       `given`(dayScheduled, slotScheduled1, slotScheduled2, slotBooked)
 
       val reason = "doctor cancelled"

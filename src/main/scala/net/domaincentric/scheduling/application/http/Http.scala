@@ -41,7 +41,7 @@ object Http {
       (for {
         command <- req.as[ScheduleDay]
         aggregate <- Task.now(
-          Aggregate(DoctorDayId(command.doctorId, command.date), new CommandHandler)
+          Aggregate(DoctorDayId(command.doctorId, command.date), new DoctorDayRules)
         )
         resp <- aggregate.handle(command) match {
           case Left(error) => BadRequest(error.asJson)
@@ -53,7 +53,7 @@ object Http {
         .flatMap(_ => Created())
     case req @ POST -> Root / "slots" / DoctorDayId(id) / "book" =>
       val metadata = EventMetadata(CorrelationId.create, CausationId.create)
-      val bare     = Aggregate(id, new CommandHandler)
+      val bare     = Aggregate(id, new DoctorDayRules)
       for {
         command   <- req.as[BookSlot]
         aggregate <- aggregateStore.reconsititute(bare)
@@ -69,7 +69,7 @@ object Http {
       val metadata = EventMetadata(CorrelationId.create, CausationId.create)
       for {
         command   <- req.as[CancelSlotBooking]
-        aggregate <- aggregateStore.reconsititute(Aggregate(id, new CommandHandler))
+        aggregate <- aggregateStore.reconsititute(Aggregate(id, new DoctorDayRules))
         resp <- aggregate.handle(command) match {
           case Left(error) => BadRequest(error.asJson)
           case Right(handled) =>

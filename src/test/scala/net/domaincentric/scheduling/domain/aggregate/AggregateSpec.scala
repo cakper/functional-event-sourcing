@@ -19,7 +19,7 @@ trait AggregateSpec[C, E, Er, S <: State[S, E]] extends AnyWordSpec with Matcher
 
   def state(): S
 
-  def handler(): CommandHandler[C, E, Er, S]
+  def handler(): Rules[C, E, Er, S]
 
   def `given`(events: E*): Unit = {
     aggregate = aggregate.reconstitute(events)
