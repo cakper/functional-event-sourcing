@@ -14,36 +14,19 @@ import net.domaincentric.scheduling.domain.aggregate.doctorday.CancelSlotBooking
 import scala.util.Try
 
 class CommandSerde extends Serde[CommandMetadata] {
-  private val prefix = "doctorday-command"
+  private val prefix = "doctorday:command"
   override def serialize(data: Any, metadata: CommandMetadata): Try[ProposedEvent] = Try {
     data match {
-      case c: CancelSlotBooking => toProposedEvent(s"$prefix-cancel-slot-booking", c.asJson, metadata)
+      case c: CancelSlotBooking => toProposedEvent(s"$prefix-cancel-slot-booking", c.asJson, metadata.asJson)
     }
-  }
-  private def toProposedEvent(`type`: String, data: Json, metadata: CommandMetadata) = {
-    new ProposedEvent(
-      UUID.randomUUID(),
-      `type`,
-      "application/json",
-      data.noSpaces.getBytes,
-      metadata.asJson.noSpaces.getBytes
-    )
   }
 
   override def deserialize(resolvedEvent: ResolvedEvent): Try[MessageEnvelope[CommandMetadata]] = Try {
-    val raw = resolvedEvent.getEvent
-    val event = (raw.getEventType match {
+    val event = (resolvedEvent.getEvent.getEventType match {
       case s"$prefix-cancel-slot-booking" => decode[CancelSlotBooking] _
-    })(new String(raw.getEventData)).toOption.get
+    })(new String(resolvedEvent.getEvent.getEventData)).toOption.get
 
-    val metadata = decode[CommandMetadata](new String(raw.getUserMetadata)).toOption.get
-    eventsourcing.MessageEnvelope(
-      event,
-      metadata,
-      raw.getEventId,
-      raw.getStreamRevision.getValueUnsigned,
-      raw.getCreated,
-      Option(resolvedEvent.getLink).map(_.getStreamRevision.getValueUnsigned)
-    )
+    val metadata = decode[CommandMetadata](new String(resolvedEvent.getEvent.getUserMetadata)).toOption.get
+    toEnvelope(event, metadata, resolvedEvent)
   }
 }

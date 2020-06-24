@@ -5,7 +5,7 @@ import monix.eval.Task
 import monix.reactive.Observable
 import net.domaincentric.scheduling.application.eventsourcing
 import net.domaincentric.scheduling.application.eventsourcing.CommandBus.CommandEnvelope
-import net.domaincentric.scheduling.application.eventsourcing.{ CommandMetadata, MessageEnvelope, PersistentSubscription, SubscriptionId }
+import net.domaincentric.scheduling.application.eventsourcing.{ CommandMetadata, PersistentSubscription, SubscriptionId }
 
 class CommandBus(client: StreamsClient, streamName: String) extends eventsourcing.CommandBus {
   private val commandStore = new EventStore[CommandMetadata](client, new CommandSerde)

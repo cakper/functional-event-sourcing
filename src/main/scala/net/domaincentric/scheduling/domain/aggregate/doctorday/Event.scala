@@ -14,19 +14,3 @@ case class SlotScheduled(slotId: SlotId, dayId: DayId, startTime: LocalDateTime,
 case class SlotBooked(slotId: SlotId, patientId: PatientId)                                                extends Event
 case class SlotBookingCancelled(slotId: SlotId, reason: String)                                            extends Event
 case class DayScheduleCancelled(dayId: DayId, reason: String)                                              extends Event
-
-case class DayId(value: String) {
-  override def toString: String = value
-}
-
-object DayId {
-  def apply(doctorId: DoctorId, date: LocalDate): DayId = DayId(s"${doctorId}_$date")
-}
-
-case class SlotId(value: UUID) {
-  override def toString: String = value.toString
-}
-
-object SlotId {
-  def create(implicit uuidGenerator: UuidGenerator): SlotId = SlotId(uuidGenerator.next())
-}
