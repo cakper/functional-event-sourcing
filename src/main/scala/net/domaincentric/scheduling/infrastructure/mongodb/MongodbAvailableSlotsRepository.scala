@@ -49,4 +49,9 @@ class MongodbAvailableSlotsRepository(database: MongoDatabase) extends Repositor
         collection.findOneAndUpdate(equal("data.slotId", slotId), set("hidden", hidden)).toFuture()
       )
       .map(_ => ())
+
+  override def deleteSlots(dayId: DayId): Task[Unit] =
+    Task
+      .deferFuture(collection.deleteMany(equal("data.dayId", dayId)).toFuture())
+      .map(_ => ())
 }

@@ -12,7 +12,7 @@ sealed trait State extends aggregate.State[State, Event]
 case object Unscheduled extends State {
   def apply(event: Event): State = event match {
     case DayScheduled(id, _, date) => Scheduled(id, date, Slots.empty)
-    case _                         => this
+    case DayScheduleArchived(_)    => Archived
   }
 }
 
@@ -22,7 +22,8 @@ case class Scheduled(dayId: DayId, date: LocalDate, slots: Slots) extends State 
     case slot: SlotScheduled             => copy(slots = slots.add(slot))
     case SlotBooked(slotId, _)           => copy(slots = slots.markAsBooked(slotId))
     case SlotBookingCancelled(slotId, _) => copy(slots = slots.markAsAvailable(slotId))
-    case _                               => this
+    case DayScheduleCancelled(_, _)      => Cancelled
+    case DayScheduleArchived(_)          => Archived
   }
 
   def hasAvailableSlot(slotId: SlotId): Boolean = slots.value.filterNot(_.booked).exists(_.slotId == slotId)
@@ -61,5 +62,18 @@ object Scheduled {
   }
   object Slots {
     def empty: Slots = Slots(Seq.empty)
+  }
+}
+
+case object Archived extends State {
+  def apply(event: Event): State = event match {
+    case _ => this
+  }
+}
+
+case object Cancelled extends State {
+  def apply(event: Event): State = event match {
+    case DayScheduleArchived(_) => Archived
+    case _                      => this
   }
 }

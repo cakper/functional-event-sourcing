@@ -16,3 +16,4 @@ case class ScheduleSlot(startTime: LocalTime, duration: FiniteDuration) extends 
 case class BookSlot(slotId: SlotId, patientId: PatientId)               extends Command
 case class CancelSlotBooking(slotId: SlotId, reason: String)            extends Command
 case class CancelDaySchedule(reason: String)                            extends Command
+case class Archive()                                                    extends Command

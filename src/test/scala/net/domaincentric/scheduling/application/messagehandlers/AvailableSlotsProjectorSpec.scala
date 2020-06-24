@@ -65,5 +65,18 @@ class AvailableSlotsProjectorSpec extends EventHandlerSpec with MongoDbSpec {
         }
       )
     }
+
+    "remove all slots from the list if the day was archived" in {
+      val scheduled = SlotScheduled(SlotId.create, DayId(DoctorId("123"), today), tenAmToday, tenMinutes)
+      val booked    = SlotBooked(scheduled.slotId, PatientId("John Doe"))
+      val cancelled = SlotBookingCancelled(scheduled.slotId, "Can't make it")
+      val archived  = DayScheduleArchived(scheduled.dayId)
+      `given`(scheduled, booked, cancelled, archived)
+      `then`(
+        repository.getAvailableSlotsOn(today).map { result =>
+          result shouldEqual Seq.empty
+        }
+      )
+    }
   }
 }

@@ -4,8 +4,8 @@ import java.time.Instant
 import java.util.UUID
 
 import monix.eval.Task
-import net.domaincentric.scheduling.application.eventsourcing.{ MessageHandler, EventMetadata, Version }
-import net.domaincentric.scheduling.domain.aggregate.doctorday.{ SlotBooked, SlotBookingCancelled, SlotScheduled }
+import net.domaincentric.scheduling.application.eventsourcing.{ EventMetadata, MessageHandler, Version }
+import net.domaincentric.scheduling.domain.aggregate.doctorday.{ DayScheduleArchived, SlotBooked, SlotBookingCancelled, SlotScheduled }
 import net.domaincentric.scheduling.domain.readmodel.avialbleslots.{ AvailableSlot, Repository }
 
 class AvailableSlotsProjector(val repository: Repository) extends MessageHandler[EventMetadata] {
@@ -30,6 +30,7 @@ class AvailableSlotsProjector(val repository: Repository) extends MessageHandler
         )
     case e: SlotBooked           => repository.hideSlot(e.slotId).map(_ => println("slot hidden"))
     case e: SlotBookingCancelled => repository.showSlot(e.slotId).map(_ => println("slot shown"))
+    case e: DayScheduleArchived  => repository.deleteSlots(e.dayId).map(_ => println("slots deleted"))
     case _                       => Task.unit
   }
 }

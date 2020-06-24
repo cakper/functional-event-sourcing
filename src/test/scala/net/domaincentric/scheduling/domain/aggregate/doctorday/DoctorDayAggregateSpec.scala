@@ -139,5 +139,17 @@ class DoctorDayAggregateSpec extends AggregateSpec[Command, Event, Error, State]
         SlotBookingCancelled(slotScheduled1.slotId, reason)
       )
     }
+
+    "archive scheduled slot" in {
+      `given`(DayScheduled(dayId, doctorId, today))
+      `when`(Archive())
+      `then`(DayScheduleArchived(dayId))
+    }
+
+    "reject commands after schedule was archived" in {
+      `given`(DayScheduleArchived(dayId))
+      `when`(ScheduleDay(doctorId, today, Seq.empty))
+      `then`(DayScheduleAlreadyArchived)
+    }
   }
 }

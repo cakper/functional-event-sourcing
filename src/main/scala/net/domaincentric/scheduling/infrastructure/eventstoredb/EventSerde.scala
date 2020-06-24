@@ -16,6 +16,7 @@ class EventSerde extends Serde[EventMetadata] {
   def deserialize(resolvedEvent: ResolvedEvent): Try[MessageEnvelope[EventMetadata]] = Try {
     val event = (resolvedEvent.getEvent.getEventType match {
       case s"$prefix-day-scheduled"          => decode[DayScheduled] _
+      case s"$prefix-day-schedule-archived"  => decode[DayScheduleArchived] _
       case s"$prefix-slot-scheduled"         => decode[SlotScheduled] _
       case s"$prefix-slot-booked"            => decode[SlotBooked] _
       case s"$prefix-slot-booking-cancelled" => decode[SlotBookingCancelled] _
@@ -29,6 +30,7 @@ class EventSerde extends Serde[EventMetadata] {
   def serialize(event: Any, metadata: EventMetadata): Try[ProposedEvent] = Try {
     event match {
       case e: DayScheduled         => toProposedEvent(s"$prefix-day-scheduled", e.asJson, metadata.asJson)
+      case e: DayScheduleArchived  => toProposedEvent(s"$prefix-day-schedule-archivedd", e.asJson, metadata.asJson)
       case e: SlotScheduled        => toProposedEvent(s"$prefix-slot-scheduled", e.asJson, metadata.asJson)
       case e: SlotBooked           => toProposedEvent(s"$prefix-slot-booked", e.asJson, metadata.asJson)
       case e: SlotBookingCancelled => toProposedEvent(s"$prefix-slot-booking-cancelled", e.asJson, metadata.asJson)
