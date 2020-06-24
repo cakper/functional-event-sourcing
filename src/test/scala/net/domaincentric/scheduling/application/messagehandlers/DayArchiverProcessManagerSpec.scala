@@ -2,36 +2,20 @@ package net.domaincentric.scheduling.application.messagehandlers
 
 import java.time.{ LocalDate, LocalDateTime, LocalTime }
 
-import com.eventstore.dbclient.{ StreamsClient, Timeouts, UserCredentials }
-import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts
-import io.grpc.netty.shaded.io.netty.handler.ssl.util.InsecureTrustManagerFactory
-import javax.net.ssl.SSLException
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
 import net.domaincentric.scheduling.application.eventsourcing.CommandBus.CommandEnvelope
-import net.domaincentric.scheduling.application.eventsourcing.{ CausationId, CommandMetadata, CorrelationId, EventMetadata, MessageHandler }
+import net.domaincentric.scheduling.application.eventsourcing._
 import net.domaincentric.scheduling.domain.writemodel.calendar.CalendarDayStarted
 import net.domaincentric.scheduling.domain.writemodel.doctorday._
 import net.domaincentric.scheduling.infrastructure.eventstoredb.{ EventSerde, EventStore }
 import net.domaincentric.scheduling.infrastructure.inmemory.ColdStorage
 import net.domaincentric.scheduling.infrastructure.mongodb.MongodbArchivableDaysRepository
-import net.domaincentric.scheduling.test.{ EventHandlerSpec, MongoDbSpec }
+import net.domaincentric.scheduling.test.{ EventHandlerSpec, EventStoreDb, MongoDb }
 
 import scala.concurrent.duration._
 
-class DayArchiverProcessManagerSpec extends EventHandlerSpec with MongoDbSpec {
-
-  val streamsClient: StreamsClient = {
-    val creds = new UserCredentials("admin", "changeit")
-    new StreamsClient("localhost", 2113, creds, Timeouts.DEFAULT, getClientSslContext)
-  }
-
-  private def getClientSslContext =
-    try GrpcSslContexts.forClient.trustManager(InsecureTrustManagerFactory.INSTANCE).build
-    catch {
-      case _: SSLException => null
-    }
-
+class DayArchiverProcessManagerSpec extends EventHandlerSpec with MongoDb with EventStoreDb {
   private val eventStore  = new EventStore(streamsClient, new EventSerde)
   private val coldStorage = new ColdStorage
   private val repository  = new MongodbArchivableDaysRepository(database)

@@ -7,11 +7,11 @@ import net.domaincentric.scheduling.application.eventsourcing.{ AggregateId, Cau
 import net.domaincentric.scheduling.domain.writemodel.doctorday._
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository
 import net.domaincentric.scheduling.infrastructure.mongodb.MongodbBookedSlotsRepository
-import net.domaincentric.scheduling.test.{ EventHandlerSpec, MongoDbSpec }
+import net.domaincentric.scheduling.test.{ EventHandlerSpec, MongoDb }
 
 import scala.concurrent.duration._
 
-class OverbookingProcessManagerSpec extends EventHandlerSpec with MongoDbSpec {
+class OverbookingProcessManagerSpec extends EventHandlerSpec with MongoDb {
   override def enableAtLeastOnceMonkey = false
   override def enableWonkyIoMonkey     = false
 

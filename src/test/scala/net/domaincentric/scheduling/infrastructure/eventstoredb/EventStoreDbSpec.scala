@@ -12,24 +12,14 @@ import monix.execution.Scheduler.Implicits.global
 import net.domaincentric.scheduling.application.eventsourcing.{ CausationId, CorrelationId, EventMetadata, Version }
 import net.domaincentric.scheduling.domain.writemodel.doctorday.{ DayId, DayScheduled, DoctorId, SlotId, SlotScheduled }
 import net.domaincentric.scheduling.domain.service.{ RandomUuidGenerator, UuidGenerator }
+import net.domaincentric.scheduling.test
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AsyncWordSpec
 
 import scala.concurrent.duration._
 
-class EventStoreSpec extends AsyncWordSpec with Matchers {
+class EventStoreDbSpec extends AsyncWordSpec with Matchers with test.EventStoreDb {
   implicit val uuidGenerator: UuidGenerator = RandomUuidGenerator
-
-  val streamsClient: StreamsClient = {
-    val creds = new UserCredentials("admin", "changeit")
-    new StreamsClient("localhost", 2113, creds, Timeouts.DEFAULT, getClientSslContext)
-  }
-
-  private def getClientSslContext =
-    try GrpcSslContexts.forClient.trustManager(InsecureTrustManagerFactory.INSTANCE).build
-    catch {
-      case _: SSLException => null
-    }
 
   val client = new EventStore(streamsClient, new EventSerde)
 
