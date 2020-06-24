@@ -5,7 +5,7 @@ import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
 import net.domaincentric.scheduling.application.eventsourcing.{ MessageEnvelope, SnapshotMetadata }
-import net.domaincentric.scheduling.domain.aggregate.doctorday.State
+import net.domaincentric.scheduling.domain.writemodel.doctorday.State
 import net.domaincentric.scheduling.infrastructure.circe.Implicits._
 
 import scala.util.Try

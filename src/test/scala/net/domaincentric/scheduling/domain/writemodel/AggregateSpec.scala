@@ -1,4 +1,4 @@
-package net.domaincentric.scheduling.domain.aggregate
+package net.domaincentric.scheduling.domain.writemodel
 
 import java.time.{ Clock, Instant, ZoneOffset }
 import java.util.UUID

@@ -10,7 +10,7 @@ import javax.net.ssl.SSLException
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
 import net.domaincentric.scheduling.application.eventsourcing.{ CausationId, CorrelationId, EventMetadata, Version }
-import net.domaincentric.scheduling.domain.aggregate.doctorday.{ DayId, DayScheduled, DoctorId, SlotId, SlotScheduled }
+import net.domaincentric.scheduling.domain.writemodel.doctorday.{ DayId, DayScheduled, DoctorId, SlotId, SlotScheduled }
 import net.domaincentric.scheduling.domain.service.{ RandomUuidGenerator, UuidGenerator }
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AsyncWordSpec

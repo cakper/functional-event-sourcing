@@ -12,7 +12,7 @@ import net.domaincentric.scheduling.application.http.Http
 import net.domaincentric.scheduling.application.messagehandlers.{ AsyncCommandHandler, AvailableSlotsProjector, OverbookingProcessManager }
 import net.domaincentric.scheduling.domain.service.{ RandomUuidGenerator, UuidGenerator }
 import net.domaincentric.scheduling.infrastructure.eventstoredb._
-import net.domaincentric.scheduling.infrastructure.mongodb.{ MongoDbBookedSlotsRepository, MongodbAvailableSlotsRepository }
+import net.domaincentric.scheduling.infrastructure.mongodb.{ MongodbBookedSlotsRepository, MongodbAvailableSlotsRepository }
 import org.http4s.HttpRoutes
 import org.mongodb.scala.MongoClient
 
@@ -52,7 +52,7 @@ class ServiceContainer(scheduler: Scheduler) {
   val commandHandlerSubscription = commandBus.subscribe().consumeWith(Consumer.foreachTask(commandHandler.handle))
 
   val overbookingProcessManager =
-    new OverbookingProcessManager(new MongoDbBookedSlotsRepository(database), commandBus, 1)
+    new OverbookingProcessManager(new MongodbBookedSlotsRepository(database), commandBus, 1)
   val overbookingProcessManagerSubscription: Task[Unit] = PersistentSubscription(
     SubscriptionId("overbooking-process"),
     "$ce-doctorday",

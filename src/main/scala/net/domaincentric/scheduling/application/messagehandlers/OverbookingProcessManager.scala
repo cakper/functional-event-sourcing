@@ -5,7 +5,7 @@ import java.util.UUID
 
 import monix.eval.Task
 import net.domaincentric.scheduling.application.eventsourcing.{ AggregateId, CausationId, CommandBus, CommandMetadata, CorrelationId, MessageHandler, EventMetadata, Version }
-import net.domaincentric.scheduling.domain.aggregate.doctorday.{ CancelSlotBooking, DoctorDayId, SlotBooked, SlotBookingCancelled, SlotScheduled }
+import net.domaincentric.scheduling.domain.writemodel.doctorday.{ CancelSlotBooking, DoctorDayId, SlotBooked, SlotBookingCancelled, SlotScheduled }
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository.Slot
 import net.domaincentric.scheduling.domain.service.UuidGenerator
@@ -28,7 +28,7 @@ class OverbookingProcessManager(repository: BookedSlotsRepository, commandBus: C
         case _ =>
           for {
             _     <- repository.markSlotAsBooked(slotId, patientId)
-            slot  <- repository.findSlot(slotId)
+            slot  <- repository.getSlot(slotId)
             count <- repository.countByPatientAndMonth(patientId, slot.month)
             _ <- if (count <= bookingLimitPerPatient) Task.unit
             else

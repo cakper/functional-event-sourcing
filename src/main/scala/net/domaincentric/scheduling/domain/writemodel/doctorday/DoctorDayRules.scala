@@ -1,12 +1,12 @@
-package net.domaincentric.scheduling.domain.aggregate.doctorday
+package net.domaincentric.scheduling.domain.writemodel.doctorday
 
 import java.time.LocalDateTime
 
-import net.domaincentric.scheduling.domain.aggregate
-import net.domaincentric.scheduling.domain.aggregate.Rules._
+import net.domaincentric.scheduling.domain.writemodel
+import net.domaincentric.scheduling.domain.writemodel.Rules._
 import net.domaincentric.scheduling.domain.service.UuidGenerator
 
-class DoctorDayRules(implicit idGen: UuidGenerator) extends aggregate.Rules[Command, Event, Error, State] {
+class DoctorDayRules(implicit idGen: UuidGenerator) extends writemodel.Rules[Command, Event, Error, State] {
   override def apply(state: State, command: Command): Either[Error, Seq[Event]] = (state, command) match {
     case (Archived, _) => DayScheduleAlreadyArchived
 

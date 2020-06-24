@@ -1,6 +1,6 @@
 package net.domaincentric.scheduling.application.eventsourcing
 
-import net.domaincentric.scheduling.domain.aggregate.{ Rules, State }
+import net.domaincentric.scheduling.domain.writemodel.{ Rules, State }
 
 case class Aggregate[C, E, Er, S <: State[S, E]](
     id: AggregateId,

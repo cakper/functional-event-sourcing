@@ -1,4 +1,4 @@
-package net.domaincentric.scheduling.domain.aggregate
+package net.domaincentric.scheduling.domain.writemodel
 
 trait Rules[C, E, Er, S <: State[S, E]] {
   def apply(state: S, command: C): Either[Er, Seq[E]]

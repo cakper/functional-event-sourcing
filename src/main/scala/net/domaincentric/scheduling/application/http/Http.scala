@@ -5,8 +5,8 @@ import io.circe.generic.auto._
 import io.circe.syntax._
 import monix.eval.Task
 import net.domaincentric.scheduling.application.eventsourcing.{ Aggregate, AggregateStore, CausationId, CorrelationId, EventMetadata, SnapshotMetadata, SnapshotStore }
-import net.domaincentric.scheduling.domain.aggregate.doctorday._
-import net.domaincentric.scheduling.domain.readmodel.avialbleslots.Repository
+import net.domaincentric.scheduling.domain.writemodel.doctorday._
+import net.domaincentric.scheduling.domain.readmodel.avialbleslots.AvailableSlotsRepository
 import net.domaincentric.scheduling.domain.service.UuidGenerator
 import net.domaincentric.scheduling.infrastructure.circe.Implicits._
 import org.http4s._
@@ -32,7 +32,7 @@ object Http {
   implicit def bookSlotDecoder: EntityDecoder[Task, BookSlot]                   = jsonOf
   implicit def cancelSlotBookingDecoder: EntityDecoder[Task, CancelSlotBooking] = jsonOf
 
-  def service(repository: Repository, aggregateStore: AggregateStore)(
+  def service(repository: AvailableSlotsRepository, aggregateStore: AggregateStore)(
       implicit uuidGenerator: UuidGenerator
   ): HttpRoutes[Task] = HttpRoutes.of[Task] {
     case GET -> Root / "slots" / LocalDateVar(date) / "available" =>

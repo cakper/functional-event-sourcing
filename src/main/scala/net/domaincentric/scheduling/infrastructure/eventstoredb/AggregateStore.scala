@@ -4,7 +4,7 @@ import net.domaincentric.scheduling.application.eventsourcing
 import net.domaincentric.scheduling.application.eventsourcing.SnapshotStore.SnapshotEnvelope
 import net.domaincentric.scheduling.application.eventsourcing.Version.`new`
 import net.domaincentric.scheduling.application.eventsourcing.{ Aggregate, EventMetadata, SnapshotMetadata }
-import net.domaincentric.scheduling.domain.aggregate.State
+import net.domaincentric.scheduling.domain.writemodel.State
 
 class AggregateStore(
     eventStore: EventStore[EventMetadata],

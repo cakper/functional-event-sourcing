@@ -1,13 +1,13 @@
-package net.domaincentric.scheduling.domain.aggregate.doctorday
+package net.domaincentric.scheduling.domain.writemodel.doctorday
 
 import java.time.{ LocalDate, LocalTime }
 
-import net.domaincentric.scheduling.domain.aggregate
-import net.domaincentric.scheduling.domain.aggregate.doctorday.Scheduled.{ Slot, Slots }
+import net.domaincentric.scheduling.domain.writemodel
+import net.domaincentric.scheduling.domain.writemodel.doctorday.Scheduled.{ Slot, Slots }
 
 import scala.concurrent.duration.{ Duration, FiniteDuration }
 
-sealed trait State extends aggregate.State[State, Event]
+sealed trait State extends writemodel.State[State, Event]
 
 case object Unscheduled extends State {
   def apply(event: Event): State = event match {

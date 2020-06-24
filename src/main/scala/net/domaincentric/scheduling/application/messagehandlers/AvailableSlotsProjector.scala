@@ -5,10 +5,10 @@ import java.util.UUID
 
 import monix.eval.Task
 import net.domaincentric.scheduling.application.eventsourcing.{ EventMetadata, MessageHandler, Version }
-import net.domaincentric.scheduling.domain.aggregate.doctorday.{ DayScheduleArchived, SlotBooked, SlotBookingCancelled, SlotScheduled }
-import net.domaincentric.scheduling.domain.readmodel.avialbleslots.{ AvailableSlot, Repository }
+import net.domaincentric.scheduling.domain.writemodel.doctorday.{ DayScheduleArchived, SlotBooked, SlotBookingCancelled, SlotScheduled }
+import net.domaincentric.scheduling.domain.readmodel.avialbleslots.{ AvailableSlot, AvailableSlotsRepository }
 
-class AvailableSlotsProjector(val repository: Repository) extends MessageHandler[EventMetadata] {
+class AvailableSlotsProjector(val repository: AvailableSlotsRepository) extends MessageHandler[EventMetadata] {
   override def handle(
       event: Any,
       metadata: EventMetadata,

@@ -3,7 +3,7 @@ package net.domaincentric.scheduling.infrastructure.mongodb
 import java.time.Month
 
 import monix.eval.Task
-import net.domaincentric.scheduling.domain.aggregate.doctorday.{ DayId, DoctorId, PatientId, SlotId }
+import net.domaincentric.scheduling.domain.writemodel.doctorday.{ DayId, DoctorId, PatientId, SlotId }
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository.Slot
 import org.bson.codecs.configuration.CodecRegistries.{ fromProviders, fromRegistries }
@@ -13,7 +13,7 @@ import org.mongodb.scala.bson.codecs.Macros._
 import org.mongodb.scala.model.Filters.{ and, equal }
 import org.mongodb.scala.{ MongoCollection, MongoDatabase }
 
-class MongoDbBookedSlotsRepository(database: MongoDatabase) extends BookedSlotsRepository {
+class MongodbBookedSlotsRepository(database: MongoDatabase) extends BookedSlotsRepository {
   case class SlotDateRow(_id: ObjectId, slotId: SlotId, dayId: DayId, monthNumber: Int) {
     def month: Month = Month.of(monthNumber)
   }
@@ -62,7 +62,7 @@ class MongoDbBookedSlotsRepository(database: MongoDatabase) extends BookedSlotsR
 
   override def markSlotAsBooked(slotId: SlotId, patientId: PatientId): Task[Unit] =
     for {
-      slot <- findSlot(slotId)
+      slot <- getSlot(slotId)
       _ <- Task
         .deferFuture {
           patientSlots
@@ -80,7 +80,7 @@ class MongoDbBookedSlotsRepository(database: MongoDatabase) extends BookedSlotsR
       }
       .map(_ => ())
 
-  override def findSlot(slotId: SlotId): Task[Slot] = {
+  override def getSlot(slotId: SlotId): Task[Slot] = {
     Task
       .deferFuture {
         slotMonths.find(equal("slotId", slotId)).toFuture()

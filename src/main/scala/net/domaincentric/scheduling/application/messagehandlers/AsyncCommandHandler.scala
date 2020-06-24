@@ -3,7 +3,7 @@ package net.domaincentric.scheduling.application.messagehandlers
 import monix.eval.Task
 import net.domaincentric.scheduling.application.eventsourcing.CommandBus.CommandEnvelope
 import net.domaincentric.scheduling.application.eventsourcing.{ Aggregate, AggregateStore, EventMetadata }
-import net.domaincentric.scheduling.domain.aggregate.doctorday.{ CancelSlotBooking, DoctorDayRules }
+import net.domaincentric.scheduling.domain.writemodel.doctorday.{ CancelSlotBooking, DoctorDayRules }
 import net.domaincentric.scheduling.domain.service.UuidGenerator
 
 class AsyncCommandHandler(aggregateStore: AggregateStore)(implicit uuidGenerator: UuidGenerator) {

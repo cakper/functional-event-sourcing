@@ -1,4 +1,4 @@
-package net.domaincentric.scheduling.domain.aggregate.doctorday
+package net.domaincentric.scheduling.domain.writemodel.doctorday
 
 sealed trait Error
 

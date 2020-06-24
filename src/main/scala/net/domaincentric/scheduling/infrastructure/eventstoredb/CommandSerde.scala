@@ -5,7 +5,7 @@ import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
 import net.domaincentric.scheduling.application.eventsourcing.{ CommandMetadata, MessageEnvelope }
-import net.domaincentric.scheduling.domain.aggregate.doctorday.CancelSlotBooking
+import net.domaincentric.scheduling.domain.writemodel.doctorday.CancelSlotBooking
 
 import scala.util.Try
 

@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import io.circe.generic.extras.semiauto.{ deriveUnwrappedDecoder, deriveUnwrappedEncoder }
 import io.circe.{ Decoder, DecodingFailure, Encoder, HCursor, Json, JsonObject }
 import net.domaincentric.scheduling.application.eventsourcing.{ CausationId, CorrelationId, Version }
-import net.domaincentric.scheduling.domain.aggregate.doctorday.{ DayId, DoctorId, PatientId, SlotId }
+import net.domaincentric.scheduling.domain.writemodel.doctorday.{ DayId, DoctorId, PatientId, SlotId }
 
 import scala.concurrent.duration.FiniteDuration
 

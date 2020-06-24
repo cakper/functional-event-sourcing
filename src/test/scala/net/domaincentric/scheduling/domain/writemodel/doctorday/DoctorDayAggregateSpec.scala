@@ -1,9 +1,9 @@
-package net.domaincentric.scheduling.domain.aggregate.doctorday
+package net.domaincentric.scheduling.domain.writemodel.doctorday
 
 import java.time.{ LocalDate, LocalDateTime, LocalTime }
 
-import net.domaincentric.scheduling.domain.aggregate.AggregateSpec
-import net.domaincentric.scheduling.domain.aggregate.doctorday.ScheduleDay.Slot
+import net.domaincentric.scheduling.domain.writemodel.AggregateSpec
+import net.domaincentric.scheduling.domain.writemodel.doctorday.ScheduleDay.Slot
 
 import scala.concurrent.duration._
 

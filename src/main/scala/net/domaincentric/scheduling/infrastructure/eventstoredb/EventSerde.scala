@@ -5,7 +5,7 @@ import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
 import net.domaincentric.scheduling.application.eventsourcing.{ EventMetadata, MessageEnvelope }
-import net.domaincentric.scheduling.domain.aggregate.doctorday._
+import net.domaincentric.scheduling.domain.writemodel.doctorday._
 import net.domaincentric.scheduling.infrastructure.circe.Implicits._
 
 import scala.util.Try
@@ -30,7 +30,7 @@ class EventSerde extends Serde[EventMetadata] {
   def serialize(event: Any, metadata: EventMetadata): Try[ProposedEvent] = Try {
     event match {
       case e: DayScheduled         => toProposedEvent(s"$prefix-day-scheduled", e.asJson, metadata.asJson)
-      case e: DayScheduleArchived  => toProposedEvent(s"$prefix-day-schedule-archivedd", e.asJson, metadata.asJson)
+      case e: DayScheduleArchived  => toProposedEvent(s"$prefix-day-schedule-archived", e.asJson, metadata.asJson)
       case e: SlotScheduled        => toProposedEvent(s"$prefix-slot-scheduled", e.asJson, metadata.asJson)
       case e: SlotBooked           => toProposedEvent(s"$prefix-slot-booked", e.asJson, metadata.asJson)
       case e: SlotBookingCancelled => toProposedEvent(s"$prefix-slot-booking-cancelled", e.asJson, metadata.asJson)

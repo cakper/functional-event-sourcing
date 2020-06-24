@@ -3,9 +3,9 @@ package net.domaincentric.scheduling.application.messagehandlers
 import java.time.{ Duration => _, _ }
 
 import net.domaincentric.scheduling.application.eventsourcing.{ MessageHandler, EventMetadata }
-import net.domaincentric.scheduling.domain.aggregate.doctorday._
+import net.domaincentric.scheduling.domain.writemodel.doctorday._
 import net.domaincentric.scheduling.domain.readmodel.avialbleslots
-import net.domaincentric.scheduling.domain.readmodel.avialbleslots.{ AvailableSlot, Repository }
+import net.domaincentric.scheduling.domain.readmodel.avialbleslots.{ AvailableSlot, AvailableSlotsRepository }
 import net.domaincentric.scheduling.test.{ EventHandlerSpec, MongoDbSpec }
 import net.domaincentric.scheduling.infrastructure.mongodb.MongodbAvailableSlotsRepository
 
@@ -17,7 +17,7 @@ class AvailableSlotsProjectorSpec extends EventHandlerSpec with MongoDbSpec {
   val tenAmToday: LocalDateTime  = LocalDateTime.of(today, tenAm)
   val tenMinutes: FiniteDuration = 10.minutes
 
-  val repository: Repository                 = new MongodbAvailableSlotsRepository(database)
+  val repository: AvailableSlotsRepository   = new MongodbAvailableSlotsRepository(database)
   val handler: MessageHandler[EventMetadata] = new AvailableSlotsProjector(repository)
 
   "available slots projector" should {
