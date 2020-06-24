@@ -4,17 +4,18 @@ import java.time.Instant
 import java.util.UUID
 
 import monix.eval.Task
-import net.domaincentric.scheduling.application.eventsourcing.{ EventHandler, EventMetadata, Version }
+import net.domaincentric.scheduling.application.eventsourcing.{ MessageHandler, EventMetadata, Version }
 import net.domaincentric.scheduling.domain.aggregate.doctorday.{ SlotBooked, SlotBookingCancelled, SlotScheduled }
 import net.domaincentric.scheduling.domain.readmodel.avialbleslots.{ AvailableSlot, Repository }
 
-class AvailableSlotsProjector(val repository: Repository) extends EventHandler {
+class AvailableSlotsProjector(val repository: Repository) extends MessageHandler[EventMetadata] {
   override def handle(
       event: Any,
       metadata: EventMetadata,
       eventId: UUID,
       position: Version,
-      occurredAt: Instant
+      occurredAt: Instant,
+      streamPosition: Option[Version]
   ): Task[Unit] = event match {
     case e: SlotScheduled =>
       repository

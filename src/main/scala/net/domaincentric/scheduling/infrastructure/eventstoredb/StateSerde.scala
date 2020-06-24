@@ -8,7 +8,7 @@ import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
 import net.domaincentric.scheduling.application.eventsourcing
-import net.domaincentric.scheduling.application.eventsourcing.{ Envelope, SnapshotMetadata }
+import net.domaincentric.scheduling.application.eventsourcing.{ MessageEnvelope, SnapshotMetadata, Version }
 import net.domaincentric.scheduling.domain.aggregate.doctorday.State
 import net.domaincentric.scheduling.infrastructure.circe.Implicits._
 
@@ -31,19 +31,20 @@ class StateSerde extends Serde[SnapshotMetadata] {
     )
   }
 
-  override def deserialize(resolvedEvent: ResolvedEvent): Try[Envelope[SnapshotMetadata]] = Try {
+  override def deserialize(resolvedEvent: ResolvedEvent): Try[MessageEnvelope[SnapshotMetadata]] = Try {
     val raw = resolvedEvent.getEvent
     val event = (raw.getEventType match {
       case s"$prefix-doctorday" => decode[State] _
     })(new String(raw.getEventData)).toOption.get
 
     val metadata = decode[SnapshotMetadata](new String(raw.getUserMetadata)).toOption.get
-    eventsourcing.Envelope(
+    eventsourcing.MessageEnvelope(
       event,
       metadata,
       raw.getEventId,
       raw.getStreamRevision.getValueUnsigned,
-      raw.getCreated
+      raw.getCreated,
+      Option(resolvedEvent.getLink).map(_.getStreamRevision.getValueUnsigned)
     )
   }
 }

@@ -8,7 +8,7 @@ import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
 import net.domaincentric.scheduling.application.eventsourcing
-import net.domaincentric.scheduling.application.eventsourcing.{ CommandMetadata, Envelope }
+import net.domaincentric.scheduling.application.eventsourcing.{ CommandMetadata, MessageEnvelope, Version }
 import net.domaincentric.scheduling.domain.aggregate.doctorday.CancelSlotBooking
 
 import scala.util.Try
@@ -30,19 +30,20 @@ class CommandSerde extends Serde[CommandMetadata] {
     )
   }
 
-  override def deserialize(resolvedEvent: ResolvedEvent): Try[Envelope[CommandMetadata]] = Try {
+  override def deserialize(resolvedEvent: ResolvedEvent): Try[MessageEnvelope[CommandMetadata]] = Try {
     val raw = resolvedEvent.getEvent
     val event = (raw.getEventType match {
       case s"$prefix-cancel-slot-booking" => decode[CancelSlotBooking] _
     })(new String(raw.getEventData)).toOption.get
 
     val metadata = decode[CommandMetadata](new String(raw.getUserMetadata)).toOption.get
-    eventsourcing.Envelope(
+    eventsourcing.MessageEnvelope(
       event,
       metadata,
       raw.getEventId,
       raw.getStreamRevision.getValueUnsigned,
-      raw.getCreated
+      raw.getCreated,
+      Option(resolvedEvent.getLink).map(_.getStreamRevision.getValueUnsigned)
     )
   }
 }

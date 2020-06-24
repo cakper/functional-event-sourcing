@@ -4,7 +4,7 @@ import java.time.Instant
 import java.util.UUID
 
 import monix.eval.Task
-import net.domaincentric.scheduling.application.eventsourcing.{ AggregateId, CausationId, CommandBus, CommandMetadata, CorrelationId, EventHandler, EventMetadata, Version }
+import net.domaincentric.scheduling.application.eventsourcing.{ AggregateId, CausationId, CommandBus, CommandMetadata, CorrelationId, MessageHandler, EventMetadata, Version }
 import net.domaincentric.scheduling.domain.aggregate.doctorday.{ CancelSlotBooking, DoctorDayId, SlotBooked, SlotBookingCancelled, SlotScheduled }
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository.Slot
@@ -12,13 +12,14 @@ import net.domaincentric.scheduling.domain.service.UuidGenerator
 
 class OverbookingProcessManager(repository: BookedSlotsRepository, commandBus: CommandBus, bookingLimitPerPatient: Int)(
     implicit uuidGenerator: UuidGenerator
-) extends EventHandler {
+) extends MessageHandler[EventMetadata] {
   override def handle(
       event: Any,
       metadata: EventMetadata,
       eventId: UUID,
       position: Version,
-      occurredAt: Instant
+      occurredAt: Instant,
+      streamPosition: Option[Version]
   ): Task[Unit] = event match {
     case SlotScheduled(slotId, dayId, startTime, _) => repository.addSlot(Slot(slotId, dayId, startTime.getMonth))
     case SlotBooked(slotId, patientId) =>
@@ -39,6 +40,6 @@ class OverbookingProcessManager(repository: BookedSlotsRepository, commandBus: C
       }
 
     case SlotBookingCancelled(slotId, _) => repository.markSlotAsAvailable(slotId)
-    case _                               => Task.raiseError(new RuntimeException("Handler not implemented"))
+    case _                               => Task.unit
   }
 }

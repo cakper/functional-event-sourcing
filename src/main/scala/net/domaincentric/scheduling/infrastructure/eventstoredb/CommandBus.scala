@@ -1,34 +1,26 @@
 package net.domaincentric.scheduling.infrastructure.eventstoredb
 
+import com.eventstore.dbclient.StreamsClient
 import monix.eval.Task
 import monix.reactive.Observable
 import net.domaincentric.scheduling.application.eventsourcing
 import net.domaincentric.scheduling.application.eventsourcing.CommandBus.CommandEnvelope
-import net.domaincentric.scheduling.application.eventsourcing.{ CommandMetadata, Envelope }
+import net.domaincentric.scheduling.application.eventsourcing.{ CommandMetadata, MessageEnvelope, PersistentSubscription, SubscriptionId }
 
-class CommandBus(eventStore: EventStore[CommandMetadata], streamName: String = "commands")
-    extends eventsourcing.CommandBus {
+class CommandBus(client: StreamsClient, streamName: String) extends eventsourcing.CommandBus {
+  private val commandStore = new EventStore[CommandMetadata](client, new CommandSerde)
+
   def send(command: Any, metadata: CommandMetadata): Task[Unit] =
-    eventStore
-      .appendToStream(
-        streamName,
-        Seq(command),
-        metadata
-      )
-      .map(_ => ())
-  def subscribe(): Observable[CommandEnvelope] =
-    eventStore
-      .readFromStream(streamName)
-      .map {
-        case Envelope(command, metadata, _, _, _) =>
-          CommandEnvelope(
-            command,
-            CommandMetadata(metadata.correlationId, metadata.causationId, metadata.aggregateId)
-          )
-      }
-//      .doOnNextAck()
-}
+    commandStore.appendToStream(streamName, Seq(command), metadata).map(_ => ())
 
-object CommandBus {
-  case class AggregateIdAndCommand(aggregateId: String, command: Any)
+  def subscribe(): Observable[CommandEnvelope] = {
+    PersistentSubscription(
+      SubscriptionId(streamName),
+      streamName,
+      commandStore,
+      new CheckpointStore(new EventStore(client, new CheckpointSerde)),
+    ).map { envelope =>
+      CommandEnvelope(envelope.data, envelope.metadata)
+    }
+  }
 }

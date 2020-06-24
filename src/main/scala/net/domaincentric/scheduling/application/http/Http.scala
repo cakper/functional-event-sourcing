@@ -67,10 +67,9 @@ object Http {
       } yield resp
     case req @ POST -> Root / "slots" / DoctorDayId(id) / "cancel" =>
       val metadata = EventMetadata(CorrelationId.create, CausationId.create)
-      val bare     = Aggregate(id, new CommandHandler)
       for {
         command   <- req.as[CancelSlotBooking]
-        aggregate <- aggregateStore.reconsititute(bare)
+        aggregate <- aggregateStore.reconsititute(Aggregate(id, new CommandHandler))
         resp <- aggregate.handle(command) match {
           case Left(error) => BadRequest(error.asJson)
           case Right(handled) =>

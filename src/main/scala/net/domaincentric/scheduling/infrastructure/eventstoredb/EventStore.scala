@@ -8,20 +8,20 @@ import monix.eval.Task
 import monix.reactive.Observable
 import net.domaincentric.scheduling.application.eventsourcing
 import net.domaincentric.scheduling.application.eventsourcing.Version._
-import net.domaincentric.scheduling.application.eventsourcing.{ Checkpoint, Envelope, OptimisticConcurrencyException, Version }
+import net.domaincentric.scheduling.application.eventsourcing.{ Checkpoint, MessageEnvelope, OptimisticConcurrencyException, Version }
 
 import scala.compat.java8.FutureConverters._
 import scala.jdk.CollectionConverters._
 import scala.util.{ Failure, Success }
 
-class EventStore[M](val client: StreamsClient, eventSerde: Serde[M]) extends eventsourcing.EventStore[M] {
+class EventStore[M](client: StreamsClient, eventSerde: Serde[M]) extends eventsourcing.EventStore[M] {
   private val pageSize = 4096
 //  private val subscriptionFilter: SubscriptionFilter =
 //    new SubscriptionFilterBuilder().withEventTypePrefix(eventSerde.prefix).build()
 
-  override def readFromStream(streamId: String, fromVersion: Version = Version(0)): Observable[Envelope[M]] = {
+  override def readFromStream(streamId: String, fromVersion: Version = Version(0)): Observable[MessageEnvelope[M]] = {
     Observable
-      .fromAsyncStateAction[StreamRevision, Seq[Envelope[M]]] {
+      .fromAsyncStateAction[StreamRevision, Seq[MessageEnvelope[M]]] {
         case StreamRevision.END => Task.now((Seq.empty, StreamRevision.END))
         case revision =>
           for {
@@ -39,12 +39,14 @@ class EventStore[M](val client: StreamsClient, eventSerde: Serde[M]) extends eve
       .flatMap(Observable.fromIterable)
   }
 
-  override def readLastFromStream(streamId: String): Task[Option[Envelope[M]]] =
+  override def readLastFromStream(streamId: String): Task[Option[MessageEnvelope[M]]] =
     Task
       .deferFuture(
         client.readStream(Direction.Backward, streamId, StreamRevision.END, 1, false).toScala
       )
-      .map(_.getEvents.asScala.toList.headOption.map(eventSerde.deserialize(_).get))
+      .map { result =>
+        result.getEvents.asScala.toList.headOption.map(eventSerde.deserialize(_).get)
+      }
 
   override def createNewStream(
       streamId: String,
@@ -126,7 +128,7 @@ class EventStore[M](val client: StreamsClient, eventSerde: Serde[M]) extends eve
       .map(_ => ())
   }
 
-  override def subscribeToAll(fromCheckpoint: Option[Checkpoint] = None): Observable[Envelope[M]] = {
+  override def subscribeToAll(fromCheckpoint: Option[Checkpoint] = None): Observable[MessageEnvelope[M]] = {
     SubscriptionObservable(
       client.subscribeToAll(fromCheckpoint.map(x => new Position(x.value, x.value)).getOrElse(Position.START), false, _)
     ).flatMap { resolvedEvent =>
@@ -138,11 +140,11 @@ class EventStore[M](val client: StreamsClient, eventSerde: Serde[M]) extends eve
     //    TODO: Handle deserialization errors
   }
 
-  override def subscribeToCategory(category: String, fromCheckpoint: Option[Checkpoint]): Observable[Envelope[M]] = {
+  override def subscribeToStream(stream: String, fromCheckpoint: Option[Checkpoint]): Observable[MessageEnvelope[M]] = {
     SubscriptionObservable(
       client
         .subscribeToStream(
-          "$ce-" + category,
+          stream,
           fromCheckpoint.map(c => new StreamRevision(c.value)).getOrElse(StreamRevision.START),
           true,
           _

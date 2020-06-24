@@ -33,7 +33,6 @@ object SubscriptionObservable {
                   case Left(Some(throwable)) => Observable.raiseError(throwable)
                 }
                 .guarantee(Task.eval(subscription.stop()))
-                .doOnSubscriptionCancel(Task.eval(println("Subscription was cancelled")))
           }
       )
       .concat

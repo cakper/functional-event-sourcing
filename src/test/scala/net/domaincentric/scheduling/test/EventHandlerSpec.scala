@@ -5,7 +5,7 @@ import java.time.{ Clock, Instant, ZoneOffset }
 import monix.eval.Task
 import monix.execution.Scheduler.Implicits.global
 import net.domaincentric.scheduling.application.eventsourcing.CommandBus.CommandEnvelope
-import net.domaincentric.scheduling.application.eventsourcing.{ CausationId, CommandBus, CorrelationId, EventHandler, EventMetadata }
+import net.domaincentric.scheduling.application.eventsourcing.{ CausationId, CommandBus, CorrelationId, MessageHandler, EventMetadata }
 import org.scalatest.Assertion
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AsyncWordSpec
@@ -18,7 +18,7 @@ abstract class EventHandlerSpec extends AsyncWordSpec with Matchers {
   def enableAtLeastOnceMonkey: Boolean = false
   def enableWonkyIoMonkey: Boolean     = false
 
-  def handler: EventHandler
+  def handler: MessageHandler[EventMetadata]
 
   private val inMemoryCommandBus: InMemoryCommandBus = new InMemoryCommandBus()
   val commandBus: CommandBus                         = inMemoryCommandBus
@@ -43,7 +43,15 @@ abstract class EventHandlerSpec extends AsyncWordSpec with Matchers {
             val range: Seq[Int] = 0 until eventRepetitions
             Task
               .traverse(range) { _ =>
-                handler.handle(event, genMetadata(), uuidGenerator.next(), position.toLong, Instant.now())
+                handler
+                  .handle(
+                    event,
+                    genMetadata(),
+                    uuidGenerator.next(),
+                    position.toLong,
+                    Instant.now(),
+                    Some(position.toLong)
+                  )
               }
         }
         .map { events =>
@@ -62,7 +70,7 @@ abstract class EventHandlerSpec extends AsyncWordSpec with Matchers {
     if (enableWonkyIoMonkey) inMemoryCommandBus.enableMonkey()
     Await.result(
       handler
-        .handle(event, metadata, uuid, nextPosition, Instant.now())
+        .handle(event, metadata, uuid, nextPosition, Instant.now(), Some(nextPosition))
         .onErrorRestartIf {
           case NonFatal(_) =>
             inMemoryCommandBus.disableMonkey()

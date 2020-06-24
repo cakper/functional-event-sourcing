@@ -3,7 +3,7 @@ package net.domaincentric.scheduling.application.eventhandlers
 import java.time.{ LocalDate, LocalDateTime, LocalTime }
 
 import net.domaincentric.scheduling.application.eventsourcing.CommandBus.CommandEnvelope
-import net.domaincentric.scheduling.application.eventsourcing.{ AggregateId, CausationId, CommandMetadata, EventHandler }
+import net.domaincentric.scheduling.application.eventsourcing.{ AggregateId, CausationId, CommandMetadata, MessageHandler }
 import net.domaincentric.scheduling.domain.aggregate.doctorday._
 import net.domaincentric.scheduling.domain.readmodel.bookedslots.BookedSlotsRepository
 import net.domaincentric.scheduling.infrastructure.mongodb.MongoDbBookedSlotsRepository
@@ -23,8 +23,8 @@ class OverbookingProcessManagerSpec extends EventHandlerSpec with MongoDbSpec {
   val repository: BookedSlotsRepository = new MongoDbBookedSlotsRepository(database)
 
   private val bookingLimitPerPatient = 3
-  override def handler: EventHandler =
-    new OverbookingProcessManager(repository, commandBus, bookingLimitPerPatient)
+
+  override def handler = new OverbookingProcessManager(repository, commandBus, bookingLimitPerPatient)
 
   "overbooking process manager" should {
     "increment the visit counter every time a patient books a slot" in {

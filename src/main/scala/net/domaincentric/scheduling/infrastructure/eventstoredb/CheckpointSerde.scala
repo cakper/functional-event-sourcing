@@ -8,7 +8,7 @@ import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
 import net.domaincentric.scheduling.application.eventsourcing
-import net.domaincentric.scheduling.application.eventsourcing.{ Checkpoint, CommandMetadata, Envelope }
+import net.domaincentric.scheduling.application.eventsourcing.{ Checkpoint, CommandMetadata, MessageEnvelope, Version }
 import net.domaincentric.scheduling.domain.aggregate.doctorday.CancelSlotBooking
 
 import scala.util.Try
@@ -27,16 +27,17 @@ class CheckpointSerde extends Serde[Unit] {
     }
   }
 
-  override def deserialize(resolvedEvent: ResolvedEvent): Try[Envelope[Unit]] = Try {
+  override def deserialize(resolvedEvent: ResolvedEvent): Try[MessageEnvelope[Unit]] = Try {
     val raw   = resolvedEvent.getEvent
     val event = decode[Checkpoint](new String(raw.getEventData)).toOption.get
 
-    eventsourcing.Envelope(
+    eventsourcing.MessageEnvelope(
       event,
       (),
       raw.getEventId,
       raw.getStreamRevision.getValueUnsigned,
-      raw.getCreated
+      raw.getCreated,
+      Option(resolvedEvent.getLink).map(_.getStreamRevision.getValueUnsigned)
     )
   }
 }

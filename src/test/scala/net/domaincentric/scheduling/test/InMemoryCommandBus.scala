@@ -3,7 +3,7 @@ package net.domaincentric.scheduling.test
 import monix.eval.Task
 import monix.reactive.Observable
 import net.domaincentric.scheduling.application.eventsourcing.CommandBus.CommandEnvelope
-import net.domaincentric.scheduling.application.eventsourcing.{ CommandBus, CommandMetadata }
+import net.domaincentric.scheduling.application.eventsourcing.{ CommandBus, CommandMetadata, MessageHandler }
 
 class InMemoryCommandBus extends CommandBus {
   private var commands      = List.empty[CommandEnvelope]

@@ -28,7 +28,7 @@ class CommandBusSpec extends AsyncWordSpec with Matchers {
 
   private val eventStore = new EventStore(streamsClient, new CommandSerde)
 
-  val commandBus = new CommandBus(eventStore, s"commands-${RandomUuidGenerator.next()}")
+  val commandBus = new CommandBus(streamsClient, s"commands-${RandomUuidGenerator.next()}")
 
   "event store command bus" should {
     "read and write commands to a stream" in {

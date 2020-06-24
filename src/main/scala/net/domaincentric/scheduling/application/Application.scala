@@ -7,11 +7,12 @@ import io.grpc.netty.shaded.io.netty.handler.ssl.util.InsecureTrustManagerFactor
 import javax.net.ssl.SSLException
 import monix.eval.{ Task, TaskApp }
 import monix.reactive.Consumer
-import net.domaincentric.scheduling.application.eventhandlers.AvailableSlotsProjector
+import net.domaincentric.scheduling.application.eventhandlers.{ AsyncCommandHandler, AvailableSlotsProjector, OverbookingProcessManager }
+import net.domaincentric.scheduling.application.eventsourcing.{ PersistentSubscription, SubscriptionId }
 import net.domaincentric.scheduling.application.http.Http
 import net.domaincentric.scheduling.domain.service.{ RandomUuidGenerator, UuidGenerator }
-import net.domaincentric.scheduling.infrastructure.eventstoredb.{ AggregateStore, EventSerde, EventStore, SnapshotStore, StateSerde }
-import net.domaincentric.scheduling.infrastructure.mongodb.MongodbAvailableSlotsRepository
+import net.domaincentric.scheduling.infrastructure.eventstoredb._
+import net.domaincentric.scheduling.infrastructure.mongodb.{ MongoDbBookedSlotsRepository, MongodbAvailableSlotsRepository }
 import org.http4s.implicits._
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
@@ -31,10 +32,12 @@ object Application extends TaskApp {
     }
 
     val mongoDbClient                         = MongoClient("mongodb://localhost")
-    val availableSlotsRepository              = new MongodbAvailableSlotsRepository(mongoDbClient.getDatabase("projections"))
+    val database                              = mongoDbClient.getDatabase("projections")
+    val availableSlotsRepository              = new MongodbAvailableSlotsRepository(database)
     val availableSlotsProjector               = new AvailableSlotsProjector(availableSlotsRepository)
     val snapshotStore                         = new SnapshotStore(new EventStore(streamsClient, new StateSerde))
-    val aggregateStore                        = new AggregateStore(new EventStore(streamsClient, new EventSerde), snapshotStore)
+    val eventStore                            = new EventStore(streamsClient, new EventSerde)
+    val aggregateStore                        = new AggregateStore(eventStore, snapshotStore)
     implicit val uuidGenerator: UuidGenerator = RandomUuidGenerator
 
     val httpServer: Task[Nothing] =
@@ -44,15 +47,34 @@ object Application extends TaskApp {
         .resource
         .use(_ => Task.never)
 
-    val projectionConsumer: Task[Unit] = new EventStore(streamsClient, new EventSerde)
-      .subscribeToAll()
-      .consumeWith(Consumer.foreachTask { envelope =>
-        availableSlotsProjector
-          .handle(envelope.data, envelope.metadata, envelope.eventId, envelope.version, envelope.occurredAt)
-      })
+    val checkpointStore = new CheckpointStore(new EventStore(streamsClient, new CheckpointSerde))
+    val availableSlotsProjectionSubscription: Task[Unit] = PersistentSubscription(
+      SubscriptionId("available-slots"),
+      "$ce-doctorday",
+      eventStore,
+      checkpointStore,
+    ).consumeWith(Consumer.foreachTask(availableSlotsProjector.handle))
+
+    val commandBus                 = new CommandBus(streamsClient, "doctorday:commands")
+    val commandHandler             = new AsyncCommandHandler(aggregateStore)
+    val commandHandlerSubscription = commandBus.subscribe().consumeWith(Consumer.foreachTask(commandHandler.handle))
+
+    val overbookingProcessManager =
+      new OverbookingProcessManager(new MongoDbBookedSlotsRepository(database), commandBus, 1)
+    val overbookingProcessManagerSubscription: Task[Unit] = PersistentSubscription(
+      SubscriptionId("overbooking-process"),
+      "$ce-doctorday",
+      eventStore,
+      checkpointStore,
+    ).consumeWith(Consumer.foreachTask(overbookingProcessManager.handle))
 
     Task
-      .parZip2(httpServer, projectionConsumer)
+      .parZip4(
+        httpServer,
+        availableSlotsProjectionSubscription,
+        commandHandlerSubscription,
+        overbookingProcessManagerSubscription
+      )
       .guarantee {
         Task.parZip2(Task.eval(streamsClient.shutdown()), Task.eval(mongoDbClient.close())).map(_ => ())
       }

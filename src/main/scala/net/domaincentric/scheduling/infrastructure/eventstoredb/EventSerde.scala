@@ -8,7 +8,7 @@ import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
 import net.domaincentric.scheduling.application.eventsourcing
-import net.domaincentric.scheduling.application.eventsourcing.{ Envelope, EventMetadata }
+import net.domaincentric.scheduling.application.eventsourcing.{ MessageEnvelope, EventMetadata }
 import net.domaincentric.scheduling.domain.aggregate.doctorday._
 import net.domaincentric.scheduling.infrastructure.circe.Implicits._
 
@@ -17,7 +17,7 @@ import scala.util.Try
 class EventSerde extends Serde[EventMetadata] {
   private val prefix = "doctorday"
 
-  def deserialize(resolvedEvent: ResolvedEvent): Try[Envelope[EventMetadata]] = Try {
+  def deserialize(resolvedEvent: ResolvedEvent): Try[MessageEnvelope[EventMetadata]] = Try {
     val rawEvent = resolvedEvent.getEvent
     val event = (rawEvent.getEventType match {
       case s"$prefix-day-scheduled"          => decode[DayScheduled] _
@@ -27,12 +27,13 @@ class EventSerde extends Serde[EventMetadata] {
     })(new String(rawEvent.getEventData)).toOption.get
 
     val metadata = decode[EventMetadata](new String(rawEvent.getUserMetadata)).toOption.get
-    eventsourcing.Envelope(
+    eventsourcing.MessageEnvelope(
       event,
       metadata,
       rawEvent.getEventId,
       rawEvent.getStreamRevision.getValueUnsigned,
-      rawEvent.getCreated
+      rawEvent.getCreated,
+      Option(resolvedEvent.getLink).map(_.getStreamRevision.getValueUnsigned)
     )
   }
 
