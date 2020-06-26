@@ -23,12 +23,18 @@ class DoctorDayRules(implicit idGen: UuidGenerator) extends writemodel.Rules[Com
 
     case (state: Scheduled, _: Archive) => DayScheduleArchived(state.dayId)
 
+    case (state: Cancelled, _: Archive) => DayScheduleArchived(state.dayId)
+
     case (_: Scheduled, _: ScheduleDay) => DayAlreadyScheduled
 
     case (state: Scheduled, CancelDaySchedule(reason)) =>
-      DayScheduleCancelled(state.dayId, reason) :: state.allBookedSlots
+      state.allBookedSlots
         .map(slot => SlotBookingCancelled(slot.slotId, reason))
         .toList
+        .appendedAll(
+          state.allSlots.map(slot => SlotCancelled(slot.slotId))
+        )
+        .appended(DayScheduleCancelled(state.dayId, reason))
 
     case (state: Scheduled, ScheduleSlot(startTime, duration)) if state.doesNotOverlap(startTime, duration) =>
       SlotScheduled(SlotId.create, state.dayId, LocalDateTime.of(state.date, startTime), duration)

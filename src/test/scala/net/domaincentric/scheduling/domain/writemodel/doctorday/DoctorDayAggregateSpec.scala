@@ -3,14 +3,11 @@ package net.domaincentric.scheduling.domain.writemodel.doctorday
 import java.time.{ LocalDate, LocalDateTime, LocalTime }
 
 import net.domaincentric.scheduling.domain.writemodel.AggregateSpec
-import net.domaincentric.scheduling.domain.writemodel.doctorday.ScheduleDay.Slot
 
 import scala.concurrent.duration._
 
 class DoctorDayAggregateSpec extends AggregateSpec[Command, Event, Error, State] {
-  override def state() = Unscheduled
-
-  override def handler() = new DoctorDayRules
+  override def rules() = new DoctorDayRules
 
   private val today: LocalDate           = LocalDate.now(clock)
   private val tenAm: LocalTime           = LocalTime.of(10, 0)
@@ -23,7 +20,7 @@ class DoctorDayAggregateSpec extends AggregateSpec[Command, Event, Error, State]
 
     "be scheduled" in {
       val startTime = LocalTime.of(9, 0)
-      val slots     = 0.until(300).by(10).map(i => Slot(startTime.plusMinutes(i), tenMinutes)).toList
+      val slots     = 0.until(300).by(10).map(i => ScheduleSlot(startTime.plusMinutes(i), tenMinutes)).toList
       val schedule  = ScheduleDay(doctorId, today, slots)
       `when`(schedule)
 
@@ -39,7 +36,7 @@ class DoctorDayAggregateSpec extends AggregateSpec[Command, Event, Error, State]
       val dayScheduled = DayScheduled(dayId, doctorId, today)
 
       val startTime = LocalTime.of(9, 0)
-      val slots     = 0.until(300).by(10).map(i => Slot(startTime.plusMinutes(i), tenMinutes)).toList
+      val slots     = 0.until(300).by(10).map(i => ScheduleSlot(startTime.plusMinutes(i), tenMinutes)).toList
       val schedule  = ScheduleDay(doctorId, today, slots)
 
       `given`(dayScheduled)
@@ -135,18 +132,26 @@ class DoctorDayAggregateSpec extends AggregateSpec[Command, Event, Error, State]
       `when`(CancelDaySchedule(reason))
 
       `then`(
-        DayScheduleCancelled(dayScheduled.dayId, reason),
-        SlotBookingCancelled(slotScheduled1.slotId, reason)
+        SlotBookingCancelled(slotScheduled1.slotId, reason),
+        SlotCancelled(slotScheduled1.slotId),
+        SlotCancelled(slotScheduled2.slotId),
+        DayScheduleCancelled(dayScheduled.dayId, reason)
       )
     }
 
-    "archive scheduled slot" in {
+    "archive scheduled day" in {
       `given`(DayScheduled(dayId, doctorId, today))
       `when`(Archive())
       `then`(DayScheduleArchived(dayId))
     }
 
-    "reject commands after schedule was archived" in {
+    "archive cancelled day" in {
+      `given`(DayScheduled(dayId, doctorId, today), DayScheduleCancelled(dayId, "doctor cancelled"))
+      `when`(Archive())
+      `then`(DayScheduleArchived(dayId))
+    }
+
+    "reject commands after day was archived" in {
       `given`(DayScheduleArchived(dayId))
       `when`(ScheduleDay(doctorId, today, Seq.empty))
       `then`(DayScheduleAlreadyArchived)

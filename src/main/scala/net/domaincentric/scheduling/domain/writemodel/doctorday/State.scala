@@ -13,6 +13,7 @@ case object Unscheduled extends State {
   def apply(event: Event): State = event match {
     case DayScheduled(id, _, date) => Scheduled(id, date, Slots.empty)
     case DayScheduleArchived(_)    => Archived
+    case _                         => this
   }
 }
 
@@ -22,7 +23,8 @@ case class Scheduled(dayId: DayId, date: LocalDate, slots: Slots) extends State 
     case slot: SlotScheduled             => copy(slots = slots.add(slot))
     case SlotBooked(slotId, _)           => copy(slots = slots.markAsBooked(slotId))
     case SlotBookingCancelled(slotId, _) => copy(slots = slots.markAsAvailable(slotId))
-    case DayScheduleCancelled(_, _)      => Cancelled
+    case SlotCancelled(slotId)           => copy(slots = slots.remove(slotId))
+    case DayScheduleCancelled(_, _)      => Cancelled(dayId)
     case DayScheduleArchived(_)          => Archived
   }
 
@@ -31,6 +33,7 @@ case class Scheduled(dayId: DayId, date: LocalDate, slots: Slots) extends State 
   def doesNotOverlap(startTime: LocalTime, duration: Duration): Boolean =
     !slots.value.exists(_.overlapsWith(startTime, duration))
   def allBookedSlots: Seq[Slot] = slots.value.filter(_.booked)
+  def allSlots: Seq[Slot]       = slots.value
 }
 
 object Scheduled {
@@ -45,6 +48,8 @@ object Scheduled {
     }
   }
   case class Slots(value: Seq[Slot]) {
+    def remove(slotId: SlotId): Slots = Slots(value.filterNot(_.slotId == slotId))
+
     def markAsAvailable(slotId: SlotId): Slots =
       Slots(value.map { slot =>
         if (slot.slotId == slotId) slot.copy(booked = false)
@@ -71,7 +76,7 @@ case object Archived extends State {
   }
 }
 
-case object Cancelled extends State {
+case class Cancelled(dayId: DayId) extends State {
   def apply(event: Event): State = event match {
     case DayScheduleArchived(_) => Archived
     case _                      => this

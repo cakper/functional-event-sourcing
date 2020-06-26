@@ -17,9 +17,7 @@ trait AggregateSpec[C, E, Er, S <: State[S, E]] extends AnyWordSpec with Matcher
   var result: Either[Er, Aggregate[C, E, Er, S]] = _
   var aggregate: Aggregate[C, E, Er, S]          = _
 
-  def state(): S
-
-  def handler(): Rules[C, E, Er, S]
+  def rules(): Rules[C, E, Er, S]
 
   def `given`(events: E*): Unit = {
     aggregate = aggregate.reconstitute(events)
@@ -53,7 +51,7 @@ trait AggregateSpec[C, E, Er, S <: State[S, E]] extends AnyWordSpec with Matcher
   override protected def beforeEach(): Unit = {
     super.beforeEach()
     uuidGenerator.reset()
-    aggregate = new Aggregate[C, E, Er, S](AggregateId(randomString(), "test"), state(), handler())
+    aggregate = new Aggregate[C, E, Er, S](AggregateId(randomString(), "test"), rules().initialState, rules())
   }
 
   protected def randomString(): String = UUID.randomUUID().toString
